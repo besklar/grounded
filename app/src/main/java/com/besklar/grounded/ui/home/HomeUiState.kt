@@ -23,6 +23,7 @@ data class HomeUiState(
     val refreshStatus: RefreshStatus = RefreshStatus.Idle,
     val initialAttemptFinished: Boolean = false,
     val selectedEventId: String? = null,
+    val newEventIds: Set<String> = emptySet(),
 ) {
     val isInitialLoading: Boolean
         get() = snapshot == null && !initialAttemptFinished

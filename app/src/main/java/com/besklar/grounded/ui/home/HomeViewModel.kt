@@ -54,9 +54,13 @@ constructor(
         refreshJob =
             viewModelScope.launch {
                 mutableUiState.value = mutableUiState.value.copy(refreshStatus = RefreshStatus.Refreshing)
+                var newEventIds = emptySet<String>()
                 val status =
                     when (val result = repository.refresh()) {
-                        is RefreshResult.Success -> RefreshStatus.Success(result.newEventIds.size)
+                        is RefreshResult.Success -> {
+                            newEventIds = result.newEventIds
+                            RefreshStatus.Success(result.newEventIds.size)
+                        }
                         is RefreshResult.HttpFailure,
                         RefreshResult.DecodingFailure,
                         RefreshResult.TransportFailure,
@@ -66,6 +70,7 @@ constructor(
                     mutableUiState.value.copy(
                         refreshStatus = status,
                         initialAttemptFinished = true,
+                        newEventIds = newEventIds,
                     )
             }
     }

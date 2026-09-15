@@ -38,6 +38,7 @@ fun HomeScreen(
     state: HomeUiState,
     onModeSelected: (HomeMode) -> Unit,
     onRefresh: () -> Unit,
+    onEventSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -64,7 +65,15 @@ fun HomeScreen(
                     state.isFullScreenFailure -> FailureState(onRefresh)
                     state.snapshot?.earthquakes?.isEmpty() == true -> EmptyState()
                     state.mode == HomeMode.MAP -> Text(stringResource(R.string.map_coming_next))
-                    else -> Text(stringResource(R.string.list_coming_next))
+                    else ->
+                        EarthquakeList(
+                            earthquakes = state.snapshot?.earthquakes.orEmpty(),
+                            refreshing = state.refreshStatus is RefreshStatus.Refreshing,
+                            refreshFailed = state.refreshStatus is RefreshStatus.Failed,
+                            newEventIds = state.newEventIds,
+                            onRefresh = onRefresh,
+                            onEventSelected = onEventSelected,
+                        )
                 }
             }
         }

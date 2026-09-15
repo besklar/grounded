@@ -20,5 +20,8 @@
     <string name="could_not_load">Earthquake data is unavailable</string>
     <string name="retry">Retry</string>
     <string name="map_coming_next">Map view</string>
-    <string name="list_coming_next">List view</string>
+    <string name="offline_saved_results">Offline — showing saved results</string>
+    <string name="new_event">New</string>
+    <string name="tsunami_flag">Tsunami flag</string>
+    <string name="earthquake_row_description">Magnitude %1$s, %2$s, %3$s. View details.</string>
 </resources>

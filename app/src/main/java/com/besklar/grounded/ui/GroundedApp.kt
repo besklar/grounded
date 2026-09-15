@@ -14,5 +14,6 @@ fun GroundedApp() {
         state = state,
         onModeSelected = viewModel::selectMode,
         onRefresh = viewModel::refresh,
+        onEventSelected = viewModel::selectEvent,
     )
 }
