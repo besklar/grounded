@@ -129,19 +129,33 @@ fun HomeScreen(
 
     Scaffold(modifier = modifier) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            PlaceSearchBar(
-                query = state.searchQuery,
-                status = state.searchStatus,
-                scope = state.searchScope,
-                radiusKilometers = state.filters.distance.radiusKilometers,
-                onQueryChanged = onSearchQueryChanged,
-                onSearch = {
-                    cameraIntent = "search"
-                    onSearch()
-                },
-                onClear = onClearSearch,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                FilterControls(
+                    filters = state.filters,
+                    locationAvailable = userCoordinates != null,
+                    searchActive = state.searchScope != null,
+                    onFiltersChanged = onFiltersChanged,
+                    onReset = onResetFilters,
+                    compact = true,
+                    modifier = Modifier.padding(start = 12.dp, top = 12.dp),
+                )
+                PlaceSearchBar(
+                    query = state.searchQuery,
+                    status = state.searchStatus,
+                    scope = state.searchScope,
+                    radiusKilometers = state.filters.distance.radiusKilometers,
+                    onQueryChanged = onSearchQueryChanged,
+                    onSearch = {
+                        cameraIntent = "search"
+                        onSearch()
+                    },
+                    onClear = onClearSearch,
+                    modifier = Modifier.weight(1f).padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                )
+            }
             if (useSidePane) {
                 Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     MapSurface(
@@ -152,9 +166,6 @@ fun HomeScreen(
                         onRefresh = onRefresh,
                         onMapEventSelected = onMapEventSelected,
                         onOpenDetails = onOpenDetails,
-                        filters = state.filters,
-                        onFiltersChanged = onFiltersChanged,
-                        onResetFilters = onResetFilters,
                         onMapTypeChanged = { mapTypeName = it.name },
                         onLocate = {
                             cameraIntent = "locate"
@@ -172,6 +183,7 @@ fun HomeScreen(
                             searchActive = state.searchScope != null,
                             onFiltersChanged = onFiltersChanged,
                             onReset = onResetFilters,
+                            showButton = false,
                         )
                         Spacer(Modifier.height(8.dp))
                         HomeModeContent(
@@ -303,6 +315,7 @@ private fun PortraitMapAndResults(
                                 searchActive = state.searchScope != null,
                                 onFiltersChanged = onFiltersChanged,
                                 onReset = onResetFilters,
+                                showButton = false,
                             )
                         }
                         Spacer(Modifier.height(8.dp))
@@ -343,9 +356,6 @@ private fun PortraitMapAndResults(
             onRefresh = onRefresh,
             onMapEventSelected = onMapEventSelected,
             onOpenDetails = onOpenDetails,
-            filters = state.filters,
-            onFiltersChanged = onFiltersChanged,
-            onResetFilters = onResetFilters,
             onMapTypeChanged = onMapTypeChanged,
             onLocate = onLocate,
             mapsConfigured = mapsConfigured,
@@ -434,9 +444,6 @@ private fun MapSurface(
     onRefresh: () -> Unit,
     onMapEventSelected: (String) -> Unit,
     onOpenDetails: (String) -> Unit,
-    filters: HomeFilters,
-    onFiltersChanged: (HomeFilters) -> Unit,
-    onResetFilters: () -> Unit,
     onMapTypeChanged: (MapType) -> Unit,
     onLocate: () -> Unit,
     mapsConfigured: Boolean,
@@ -467,14 +474,6 @@ private fun MapSurface(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             MapTypeControl(mapType, onMapTypeChanged)
-            FilterControls(
-                filters = filters,
-                locationAvailable = state.locationContext is LocationContext.Available,
-                searchActive = state.searchScope != null,
-                onFiltersChanged = onFiltersChanged,
-                onReset = onResetFilters,
-                compact = true,
-            )
             FilledTonalIconButton(
                 onClick = {
                     if (state.locationContext is LocationContext.Available) onLocate() else showLocationExplanation = true
@@ -736,12 +735,14 @@ private fun FilterControls(
     searchActive: Boolean,
     onFiltersChanged: (HomeFilters) -> Unit,
     onReset: () -> Unit,
+    modifier: Modifier = Modifier,
     compact: Boolean = false,
+    showButton: Boolean = true,
 ) {
     var showSheet by rememberSaveable { mutableStateOf(false) }
     val activeFilterCount = filters.activeCount(searchActive)
     if (compact) {
-        FilledTonalIconButton(onClick = { showSheet = true }) {
+        FilledTonalIconButton(onClick = { showSheet = true }, modifier = modifier) {
             Icon(
                 Icons.Rounded.Tune,
                 contentDescription =
@@ -753,17 +754,19 @@ private fun FilterControls(
             )
         }
     } else {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { showSheet = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Rounded.Tune, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (activeFilterCount == 0) {
-                        stringResource(R.string.filters)
-                    } else {
-                        pluralStringResource(R.plurals.filters_changed, activeFilterCount, activeFilterCount)
-                    },
-                )
+        Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (showButton) {
+                OutlinedButton(onClick = { showSheet = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Rounded.Tune, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (activeFilterCount == 0) {
+                            stringResource(R.string.filters)
+                        } else {
+                            pluralStringResource(R.plurals.filters_changed, activeFilterCount, activeFilterCount)
+                        },
+                    )
+                }
             }
             Text(
                 text =

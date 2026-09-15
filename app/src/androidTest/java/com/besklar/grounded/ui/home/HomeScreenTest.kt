@@ -210,7 +210,7 @@ class HomeScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Filters").performClick()
+        composeRule.onNodeWithContentDescription("Filters").performClick()
         composeRule.onNodeWithText("past hour").performClick()
         composeRule.runOnIdle { assertEquals(TimeRange.PAST_HOUR, filters.timeRange) }
         composeRule.onNodeWithText("100 mi").performClick()
@@ -295,6 +295,7 @@ class HomeScreenTest {
         composeRule.onNodeWithContentDescription("Map layers").performClick()
         composeRule.onNodeWithText("Terrain map").assertIsDisplayed()
         composeRule.onNodeWithText("Satellite map").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Filters").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Locate me").performClick()
         composeRule.onNodeWithText("Your location is not uploaded or stored", substring = true).assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(false, requested) }
