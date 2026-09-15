@@ -521,13 +521,12 @@ private fun MapSurface(
             ) {
                 Icon(Icons.Rounded.MyLocation, contentDescription = stringResource(R.string.locate_me))
             }
-        }
-        FilledTonalIconButton(
-            onClick = onRefresh,
-            enabled = state.refreshStatus !is RefreshStatus.Refreshing,
-            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-        ) {
-            Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.refresh))
+            FilledTonalIconButton(
+                onClick = onRefresh,
+                enabled = state.refreshStatus !is RefreshStatus.Refreshing,
+            ) {
+                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.refresh))
+            }
         }
     }
     if (showLocationExplanation) {

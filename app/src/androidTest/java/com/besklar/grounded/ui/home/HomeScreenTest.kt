@@ -20,6 +20,7 @@ import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
 import com.besklar.grounded.ui.theme.GroundedTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -305,6 +306,15 @@ class HomeScreenTest {
                 )
             }
         }
+
+        val layersBounds = composeRule.onNodeWithContentDescription("Map layers").fetchSemanticsNode().boundsInRoot
+        val locationBounds = composeRule.onNodeWithContentDescription("Locate me").fetchSemanticsNode().boundsInRoot
+        val refreshBounds = composeRule.onNodeWithContentDescription("Refresh earthquake data").fetchSemanticsNode().boundsInRoot
+
+        assertEquals(layersBounds.center.x, locationBounds.center.x, 1f)
+        assertEquals(layersBounds.center.x, refreshBounds.center.x, 1f)
+        assertTrue(layersBounds.center.y < locationBounds.center.y)
+        assertTrue(locationBounds.center.y < refreshBounds.center.y)
 
         composeRule.onNodeWithContentDescription("Map layers").performClick()
         composeRule.onNodeWithText("Terrain map").assertIsDisplayed()
