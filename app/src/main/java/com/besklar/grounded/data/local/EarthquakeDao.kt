@@ -1,0 +1,28 @@
+package com.besklar.grounded.data.local
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+internal interface EarthquakeDao {
+    @Query("SELECT * FROM earthquakes ORDER BY occurredAtMillis DESC")
+    fun observeEarthquakes(): Flow<List<EarthquakeEntity>>
+
+    @Query("SELECT * FROM snapshot_metadata WHERE id = 1")
+    fun observeMetadata(): Flow<SnapshotMetadataEntity?>
+
+    @Query("SELECT * FROM earthquakes")
+    suspend fun getEarthquakes(): List<EarthquakeEntity>
+
+    @Query("DELETE FROM earthquakes")
+    suspend fun deleteEarthquakes()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEarthquakes(events: List<EarthquakeEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMetadata(metadata: SnapshotMetadataEntity)
+}

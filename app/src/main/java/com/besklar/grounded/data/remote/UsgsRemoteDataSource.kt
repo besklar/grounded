@@ -15,13 +15,17 @@ internal sealed interface RemoteFeedResult {
     data class DecodingFailure(val cause: Throwable) : RemoteFeedResult
 }
 
+internal interface EarthquakeRemoteSource {
+    suspend fun fetch(): RemoteFeedResult
+}
+
 internal class UsgsRemoteDataSource
 @Inject
 constructor(
     private val api: UsgsApi,
     private val mapper: UsgsFeedMapper,
-) {
-    suspend fun fetch(): RemoteFeedResult = try {
+) : EarthquakeRemoteSource {
+    override suspend fun fetch(): RemoteFeedResult = try {
         val response = api.getPastDay()
         val body = response.body()
         when {
