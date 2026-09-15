@@ -4,12 +4,6 @@ Grounded is a calm, location-aware Android companion for understanding recent ea
 
 Grounded is informational. It is not an earthquake early-warning or emergency-safety system.
 
-![Grounded earthquake list on Android](docs/grounded-home.png)
-
-Large text, dark theme, and landscape are supported through an adaptive two-pane layout:
-
-![Grounded in dark landscape mode at 180 percent font scale](docs/grounded-dark-large-landscape.png)
-
 ## Features
 
 - Recent worldwide earthquake activity from the official USGS seven-day GeoJSON feed
