@@ -1,6 +1,7 @@
 package com.besklar.grounded.ui.home
 
 import com.besklar.grounded.location.RelativeLocationCalculator
+import com.besklar.grounded.location.SearchScope
 import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import java.time.Duration
@@ -48,6 +49,7 @@ object EarthquakeFilter {
         filters: HomeFilters,
         now: Instant,
         userCoordinates: Coordinates?,
+        searchScope: SearchScope? = null,
     ): List<Earthquake> {
         val earliest = now.minus(filters.timeRange.duration)
         val filtered =
@@ -55,6 +57,11 @@ object EarthquakeFilter {
                 !earthquake.occurredAt.isBefore(earliest) &&
                     filters.magnitude.minimum?.let { minimum ->
                         earthquake.magnitude?.let { it >= minimum } == true
+                    } != false &&
+                    searchScope?.let { scope ->
+                        earthquake.coordinates?.let { coordinates ->
+                            RelativeLocationCalculator.calculate(scope.center, coordinates).distanceKilometers <= scope.radiusKilometers
+                        } == true
                     } != false
             }
         return when (filters.order) {

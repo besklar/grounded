@@ -1,6 +1,7 @@
 package com.besklar.grounded.ui.home
 
 import com.besklar.grounded.location.LocationContext
+import com.besklar.grounded.location.SearchScope
 import com.besklar.grounded.model.EarthquakeSnapshot
 import java.time.Duration
 
@@ -19,6 +20,22 @@ sealed interface RefreshStatus {
     data object Failed : RefreshStatus
 }
 
+enum class SearchFailure {
+    NOT_FOUND,
+    PROVIDER_UNAVAILABLE,
+    FAILED,
+}
+
+sealed interface SearchStatus {
+    data object Idle : SearchStatus
+
+    data object Searching : SearchStatus
+
+    data object Resolved : SearchStatus
+
+    data class Error(val failure: SearchFailure) : SearchStatus
+}
+
 data class HomeUiState(
     val snapshot: EarthquakeSnapshot? = null,
     val mode: HomeMode = HomeMode.LIST,
@@ -29,6 +46,9 @@ data class HomeUiState(
     val locationContext: LocationContext = LocationContext.NotRequested,
     val dataAge: Duration? = null,
     val filters: HomeFilters = HomeFilters.DEFAULT,
+    val searchQuery: String = "",
+    val searchScope: SearchScope? = null,
+    val searchStatus: SearchStatus = SearchStatus.Idle,
 ) {
     val isInitialLoading: Boolean
         get() = snapshot == null && !initialAttemptFinished

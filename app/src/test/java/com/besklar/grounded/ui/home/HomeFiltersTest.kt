@@ -1,5 +1,6 @@
 package com.besklar.grounded.ui.home
 
+import com.besklar.grounded.location.SearchScope
 import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import org.junit.Assert.assertEquals
@@ -71,6 +72,39 @@ class HomeFiltersTest {
             )
 
         assertEquals(listOf("newer", "older"), result.map(Earthquake::id))
+    }
+
+    @Test
+    fun `search scope includes only events within five hundred miles`() {
+        val result =
+            EarthquakeFilter.apply(
+                earthquakes =
+                listOf(
+                    earthquake("inside", 3.0, 1, Coordinates(7.0, 0.0)),
+                    earthquake("outside", 3.0, 1, Coordinates(8.0, 0.0)),
+                    earthquake("missing", 3.0, 1),
+                ),
+                filters = HomeFilters(),
+                now = now,
+                userCoordinates = null,
+                searchScope = SearchScope("Origin", Coordinates(0.0, 0.0)),
+            )
+
+        assertEquals(listOf("inside"), result.map(Earthquake::id))
+    }
+
+    @Test
+    fun `search scope handles the antimeridian`() {
+        val result =
+            EarthquakeFilter.apply(
+                earthquakes = listOf(earthquake("across-date-line", 3.0, 1, Coordinates(0.0, -179.9))),
+                filters = HomeFilters(),
+                now = now,
+                userCoordinates = null,
+                searchScope = SearchScope("Date line", Coordinates(0.0, 179.9)),
+            )
+
+        assertEquals(listOf("across-date-line"), result.map(Earthquake::id))
     }
 
     private fun earthquake(

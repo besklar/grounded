@@ -7,6 +7,10 @@ import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.RefreshResult
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.location.LocationRepository
+import com.besklar.grounded.location.LocationSearchRepository
+import com.besklar.grounded.location.LocationSearchResult
+import com.besklar.grounded.location.SearchScope
+import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
 import kotlinx.coroutines.CompletableDeferred
@@ -134,7 +138,7 @@ class HomeViewModelTest {
             )
         val repository = FakeRepository(result = RefreshResult.Success(emptySet(), 0, 0))
         val viewModel =
-            HomeViewModel(repository, FakeLocationRepository(), savedState, Clock.fixed(now, ZoneOffset.UTC))
+            HomeViewModel(repository, FakeLocationRepository(), FakeLocationSearchRepository(), savedState, Clock.fixed(now, ZoneOffset.UTC))
         runCurrent()
 
         assertEquals(
@@ -146,9 +150,79 @@ class HomeViewModelTest {
         viewModel.viewModelScope.cancel()
     }
 
-    private fun viewModel(repository: EarthquakeRepository) = HomeViewModel(
+    @Test
+    fun `successful search resolves and scopes results`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val scope = SearchScope("Denver, Colorado", Coordinates(39.7, -104.9))
+        val searchRepository = FakeLocationSearchRepository(LocationSearchResult.Success(scope))
+        val viewModel = viewModel(FakeRepository(RefreshResult.Success(emptySet(), 0, 0)), searchRepository)
+        runCurrent()
+
+        viewModel.updateSearchQuery("  Denver  ")
+        viewModel.submitSearch()
+        runCurrent()
+
+        assertEquals(listOf("Denver"), searchRepository.queries)
+        assertEquals(scope, viewModel.uiState.value.searchScope)
+        assertEquals(SearchStatus.Resolved, viewModel.uiState.value.searchStatus)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `failed replacement search preserves the active scope`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val scope = SearchScope("Denver, Colorado", Coordinates(39.7, -104.9))
+        val searchRepository = FakeLocationSearchRepository(LocationSearchResult.Success(scope))
+        val viewModel = viewModel(FakeRepository(RefreshResult.Success(emptySet(), 0, 0)), searchRepository)
+        runCurrent()
+        viewModel.updateSearchQuery("Denver")
+        viewModel.submitSearch()
+        runCurrent()
+
+        searchRepository.result = LocationSearchResult.NotFound
+        viewModel.updateSearchQuery("Definitely not a place")
+        viewModel.submitSearch()
+        runCurrent()
+
+        assertEquals(scope, viewModel.uiState.value.searchScope)
+        assertEquals(SearchStatus.Error(SearchFailure.NOT_FOUND), viewModel.uiState.value.searchStatus)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `search scope restores and clear removes it`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val savedState =
+            SavedStateHandle(
+                mapOf(
+                    "search_query" to "Denver",
+                    "search_label" to "Denver, Colorado",
+                    "search_latitude" to 39.7,
+                    "search_longitude" to -104.9,
+                ),
+            )
+        val viewModel =
+            HomeViewModel(
+                FakeRepository(RefreshResult.Success(emptySet(), 0, 0)),
+                FakeLocationRepository(),
+                FakeLocationSearchRepository(),
+                savedState,
+                Clock.fixed(now, ZoneOffset.UTC),
+            )
+        runCurrent()
+
+        assertEquals("Denver, Colorado", viewModel.uiState.value.searchScope?.label)
+        viewModel.clearSearch()
+        assertEquals(null, viewModel.uiState.value.searchScope)
+        assertEquals("", viewModel.uiState.value.searchQuery)
+        assertEquals(SearchStatus.Idle, viewModel.uiState.value.searchStatus)
+        viewModel.viewModelScope.cancel()
+    }
+
+    private fun viewModel(
+        repository: EarthquakeRepository,
+        searchRepository: LocationSearchRepository = FakeLocationSearchRepository(),
+    ) = HomeViewModel(
         repository = repository,
         locationRepository = FakeLocationRepository(),
+        locationSearchRepository = searchRepository,
         savedStateHandle = SavedStateHandle(),
         clock = Clock.fixed(now, ZoneOffset.UTC),
     )
@@ -180,5 +254,16 @@ class HomeViewModelTest {
         override suspend fun loadApproximateLocation() = Unit
 
         override fun recordDenial(permanently: Boolean) = Unit
+    }
+
+    private class FakeLocationSearchRepository(
+        var result: LocationSearchResult = LocationSearchResult.NotFound,
+    ) : LocationSearchRepository {
+        val queries = mutableListOf<String>()
+
+        override suspend fun search(query: String): LocationSearchResult {
+            queries += query
+            return result
+        }
     }
 }

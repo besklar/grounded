@@ -13,6 +13,8 @@ import com.besklar.grounded.data.repository.EarthquakeStore
 import com.besklar.grounded.data.repository.OfflineFirstEarthquakeRepository
 import com.besklar.grounded.location.DefaultLocationRepository
 import com.besklar.grounded.location.LocationRepository
+import com.besklar.grounded.location.LocationSearchRepository
+import com.besklar.grounded.location.SystemLocationSearchRepository
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import dagger.Binds
@@ -47,6 +49,10 @@ internal abstract class AppBindings {
     @Binds
     @Singleton
     abstract fun bindLocationRepository(repository: DefaultLocationRepository): LocationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLocationSearchRepository(repository: SystemLocationSearchRepository): LocationSearchRepository
 }
 
 @Module

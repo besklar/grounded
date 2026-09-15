@@ -7,6 +7,10 @@ import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.RefreshResult
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.location.LocationRepository
+import com.besklar.grounded.location.LocationSearchRepository
+import com.besklar.grounded.location.LocationSearchResult
+import com.besklar.grounded.location.SearchScope
+import com.besklar.grounded.model.Coordinates
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -29,6 +33,7 @@ class HomeViewModel
 constructor(
     private val repository: EarthquakeRepository,
     private val locationRepository: LocationRepository,
+    private val locationSearchRepository: LocationSearchRepository,
     private val savedStateHandle: SavedStateHandle,
     private val clock: Clock,
 ) : ViewModel() {
@@ -42,6 +47,9 @@ constructor(
                     magnitude = savedEnum(MAGNITUDE_KEY, MagnitudeFilter.ALL),
                     order = savedEnum(ORDER_KEY, EarthquakeOrder.RECENT),
                 ),
+                searchQuery = savedStateHandle[SEARCH_QUERY_KEY] ?: "",
+                searchScope = restoredSearchScope(),
+                searchStatus = if (savedStateHandle.get<String>(SEARCH_LABEL_KEY) != null) SearchStatus.Resolved else SearchStatus.Idle,
             ),
         )
     val uiState: StateFlow<HomeUiState> = mutableUiState.asStateFlow()
@@ -49,6 +57,7 @@ constructor(
     val effects: SharedFlow<HomeEffect> = mutableEffects
 
     private var refreshJob: Job? = null
+    private var searchJob: Job? = null
     private var clearNewEventsJob: Job? = null
     private var clearRefreshStatusJob: Job? = null
     private val initialSnapshotObserved = CompletableDeferred<Unit>()
@@ -61,7 +70,7 @@ constructor(
                     current.copy(
                         snapshot = snapshot,
                         dataAge = snapshot?.let { Duration.between(it.lastSuccessfulRetrieval, clock.instant()).coerceAtLeast(Duration.ZERO) },
-                        selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(snapshot, current.filters, current.locationContext) },
+                        selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(snapshot, current.filters, current.locationContext, current.searchScope) },
                     )
                 initialSnapshotObserved.complete(Unit)
             }
@@ -102,8 +111,46 @@ constructor(
         mutableUiState.value =
             current.copy(
                 filters = filters,
-                selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(current.snapshot, filters, current.locationContext) },
+                selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(current.snapshot, filters, current.locationContext, current.searchScope) },
             )
+    }
+
+    fun updateSearchQuery(query: String) {
+        savedStateHandle[SEARCH_QUERY_KEY] = query
+        mutableUiState.value =
+            mutableUiState.value.copy(
+                searchQuery = query,
+                searchStatus = if (mutableUiState.value.searchStatus is SearchStatus.Error) SearchStatus.Idle else mutableUiState.value.searchStatus,
+            )
+    }
+
+    fun submitSearch() {
+        val query = mutableUiState.value.searchQuery.trim()
+        if (query.isEmpty()) {
+            clearSearch()
+            return
+        }
+        searchJob?.cancel()
+        searchJob =
+            viewModelScope.launch {
+                mutableUiState.value = mutableUiState.value.copy(searchStatus = SearchStatus.Searching)
+                when (val result = locationSearchRepository.search(query)) {
+                    is LocationSearchResult.Success -> applySearchScope(query, result.scope)
+                    LocationSearchResult.NotFound -> setSearchFailure(SearchFailure.NOT_FOUND)
+                    LocationSearchResult.ProviderUnavailable -> setSearchFailure(SearchFailure.PROVIDER_UNAVAILABLE)
+                    LocationSearchResult.Failed -> setSearchFailure(SearchFailure.FAILED)
+                }
+            }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        savedStateHandle[SEARCH_QUERY_KEY] = ""
+        savedStateHandle.remove<String>(SEARCH_LABEL_KEY)
+        savedStateHandle.remove<Double>(SEARCH_LATITUDE_KEY)
+        savedStateHandle.remove<Double>(SEARCH_LONGITUDE_KEY)
+        val current = mutableUiState.value
+        mutableUiState.value = current.copy(searchQuery = "", searchScope = null, searchStatus = SearchStatus.Idle, selectedEventId = null)
     }
 
     fun resetFilters() {
@@ -168,6 +215,10 @@ constructor(
         const val TIME_RANGE_KEY = "time_range"
         const val MAGNITUDE_KEY = "magnitude_filter"
         const val ORDER_KEY = "earthquake_order"
+        const val SEARCH_QUERY_KEY = "search_query"
+        const val SEARCH_LABEL_KEY = "search_label"
+        const val SEARCH_LATITUDE_KEY = "search_latitude"
+        const val SEARCH_LONGITUDE_KEY = "search_longitude"
         const val NEW_EVENT_DURATION_MILLIS = 30_000L
         const val REFRESH_CONFIRMATION_MILLIS = 3_000L
         const val FRESHNESS_TICK_MILLIS = 60_000L
@@ -179,11 +230,34 @@ constructor(
         snapshot: com.besklar.grounded.model.EarthquakeSnapshot?,
         filters: HomeFilters,
         locationContext: LocationContext,
+        searchScope: SearchScope?,
     ): Set<String> = EarthquakeFilter
         .apply(
             earthquakes = snapshot?.earthquakes.orEmpty(),
             filters = filters,
             now = clock.instant(),
             userCoordinates = (locationContext as? LocationContext.Available)?.coordinates,
+            searchScope = searchScope,
         ).mapTo(mutableSetOf()) { it.id }
+
+    private fun applySearchScope(query: String, scope: SearchScope) {
+        savedStateHandle[SEARCH_QUERY_KEY] = query
+        savedStateHandle[SEARCH_LABEL_KEY] = scope.label
+        savedStateHandle[SEARCH_LATITUDE_KEY] = scope.center.latitude
+        savedStateHandle[SEARCH_LONGITUDE_KEY] = scope.center.longitude
+        val current = mutableUiState.value
+        mutableUiState.value = current.copy(searchQuery = query, searchScope = scope, searchStatus = SearchStatus.Resolved, selectedEventId = null)
+    }
+
+    private fun setSearchFailure(failure: SearchFailure) {
+        mutableUiState.value = mutableUiState.value.copy(searchStatus = SearchStatus.Error(failure))
+    }
+
+    private fun restoredSearchScope(): SearchScope? {
+        val label = savedStateHandle.get<String>(SEARCH_LABEL_KEY) ?: return null
+        val latitude = savedStateHandle.get<Double>(SEARCH_LATITUDE_KEY) ?: return null
+        val longitude = savedStateHandle.get<Double>(SEARCH_LONGITUDE_KEY) ?: return null
+        if (!latitude.isFinite() || !longitude.isFinite() || latitude !in -90.0..90.0 || longitude !in -180.0..180.0) return null
+        return SearchScope(label, Coordinates(latitude, longitude))
+    }
 }
