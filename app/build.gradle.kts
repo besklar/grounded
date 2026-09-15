@@ -64,7 +64,8 @@ android {
     lint {
         abortOnError = true
         warningsAsErrors = true
-        disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "ObsoleteSdkInt")
+        // API 37 is still a preview target; API 36 is the current production and Play target.
+        disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "ObsoleteSdkInt", "OldTargetApi")
     }
 }
 
