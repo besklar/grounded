@@ -97,6 +97,7 @@ fun GroundedApp() {
                 onSearchQueryChanged = viewModel::updateSearchQuery,
                 onSearch = viewModel::submitSearch,
                 onClearSearch = viewModel::clearSearch,
+                onViewportChanged = viewModel::updateMapViewport,
             )
         }
         composable(
@@ -113,6 +114,7 @@ fun GroundedApp() {
                 refreshing = detailState.isRefreshing,
                 refreshFailed = detailState.refreshFailed,
                 onRefresh = viewModel::refresh,
+                asOf = detailState.asOf,
             )
         }
     }

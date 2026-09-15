@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -20,6 +21,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DetailViewModelTest {
@@ -64,10 +69,32 @@ class DetailViewModelTest {
         collection.cancel()
     }
 
-    private fun detailViewModel(repository: EarthquakeRepository) = DetailViewModel(
+    @Test
+    fun `screen time advances while detail state is observed`() = runTest {
+        val clock = MutableClock(Instant.parse("2026-09-13T20:00:00Z"))
+        val repository = FakeRepository(CompletableDeferred())
+        val viewModel = detailViewModel(repository, clock)
+        val collection = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+
+        runCurrent()
+        assertEquals(clock.instant(), viewModel.uiState.value.asOf)
+
+        clock.now = clock.now.plusSeconds(60)
+        advanceTimeBy(60_000)
+        runCurrent()
+
+        assertEquals(clock.instant(), viewModel.uiState.value.asOf)
+        collection.cancel()
+    }
+
+    private fun detailViewModel(
+        repository: EarthquakeRepository,
+        clock: Clock = Clock.fixed(Instant.parse("2026-09-13T20:00:00Z"), ZoneOffset.UTC),
+    ) = DetailViewModel(
         repository = repository,
         locationRepository = FakeLocationRepository(),
         savedStateHandle = SavedStateHandle(mapOf("eventId" to "event")),
+        clock = clock,
     )
 
     private class FakeRepository(private val result: CompletableDeferred<RefreshResult>) : EarthquakeRepository {
@@ -88,5 +115,13 @@ class DetailViewModelTest {
         override suspend fun loadApproximateLocation() = Unit
 
         override fun recordDenial(permanently: Boolean) = Unit
+    }
+
+    private class MutableClock(var now: Instant) : Clock() {
+        override fun instant(): Instant = now
+
+        override fun getZone(): ZoneId = ZoneOffset.UTC
+
+        override fun withZone(zone: ZoneId): Clock = Clock.fixed(now, zone)
     }
 }

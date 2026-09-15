@@ -88,7 +88,6 @@ import com.besklar.grounded.location.SearchScope
 import com.besklar.grounded.model.Earthquake
 import com.google.maps.android.compose.MapType
 import kotlinx.coroutines.launch
-import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,30 +104,10 @@ fun HomeScreen(
     onSearchQueryChanged: (String) -> Unit = {},
     onSearch: () -> Unit = {},
     onClearSearch: () -> Unit = {},
+    onViewportChanged: (MapViewport) -> Unit = {},
     mapsConfigured: Boolean = com.besklar.grounded.BuildConfig.MAPS_CONFIGURED,
 ) {
     val userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates
-    val mapEarthquakes =
-        EarthquakeFilter.apply(
-            earthquakes = state.snapshot?.earthquakes.orEmpty(),
-            filters = state.filters,
-            now = Instant.now(),
-            userCoordinates = userCoordinates,
-            searchScope = null,
-        )
-    var mapViewport by remember { mutableStateOf<MapViewport?>(null) }
-    val visibleEarthquakes =
-        mapViewport?.let { viewport ->
-            mapEarthquakes.filter { earthquake -> earthquake.coordinates?.let(viewport::contains) == true }
-        } ?: EarthquakeFilter.apply(
-            earthquakes = state.snapshot?.earthquakes.orEmpty(),
-            filters = state.filters,
-            now = Instant.now(),
-            userCoordinates = userCoordinates,
-            searchScope = state.searchScope,
-        )
-    val filteredState = state.copy(snapshot = state.snapshot?.copy(earthquakes = visibleEarthquakes))
-    val filtersExcludedAll = state.snapshot?.earthquakes?.isNotEmpty() == true && visibleEarthquakes.isEmpty()
     val windowWidth = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() }
     val useSidePane = windowWidth >= 600.dp
     var mapTypeName by rememberSaveable { mutableStateOf(MapType.NORMAL.name) }
@@ -145,7 +124,6 @@ fun HomeScreen(
         }
 
     fun locateMap() {
-        mapViewport = null
         cameraIntent = "locate"
         locateRequest++
         onClearSearch()
@@ -154,7 +132,6 @@ fun HomeScreen(
 
     fun updateFilters(filters: HomeFilters) {
         if (filters.distance != state.filters.distance && state.searchScope != null) {
-            mapViewport = null
             cameraIntent = "search"
         }
         onFiltersChanged(filters)
@@ -162,7 +139,6 @@ fun HomeScreen(
 
     fun resetFilters() {
         if (state.searchScope != null) {
-            mapViewport = null
             cameraIntent = "search"
         }
         onResetFilters()
@@ -194,7 +170,6 @@ fun HomeScreen(
                     radiusKilometers = state.filters.distance.radiusKilometers,
                     onQueryChanged = onSearchQueryChanged,
                     onSearch = {
-                        mapViewport = null
                         cameraIntent = "search"
                         onSearch()
                     },
@@ -205,8 +180,8 @@ fun HomeScreen(
             if (useSidePane) {
                 Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     MapSurface(
-                        state = filteredState,
-                        mapEarthquakes = mapEarthquakes,
+                        state = state,
+                        mapEarthquakes = state.mapEarthquakes,
                         mapType = mapType,
                         cameraFocus = cameraFocus,
                         cameraFocusKey = cameraFocusKey,
@@ -214,12 +189,12 @@ fun HomeScreen(
                         onOpenDetails = onOpenDetails,
                         onMapTypeChanged = { mapTypeName = it.name },
                         onLocate = ::locateMap,
-                        onViewportChanged = { mapViewport = it },
+                        onViewportChanged = onViewportChanged,
                         mapsConfigured = mapsConfigured,
                         modifier = Modifier.weight(0.62f).fillMaxHeight(),
                     )
                     Column(modifier = Modifier.weight(0.38f).fillMaxHeight().padding(end = 12.dp)) {
-                        SituationSummaryCard(filteredState, onRequestLocation)
+                        SituationSummaryCard(state, onRequestLocation)
                         FilterControls(
                             filters = state.filters,
                             locationAvailable = userCoordinates != null,
@@ -230,8 +205,8 @@ fun HomeScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         HomeModeContent(
-                            state = filteredState.copy(mode = HomeMode.LIST),
-                            filtersExcludedAll = filtersExcludedAll,
+                            state = state.copy(mode = HomeMode.LIST),
+                            filtersExcludedAll = state.filtersExcludedAll,
                             onRefresh = onRefresh,
                             onEventSelected = onEventSelected,
                             modifier = Modifier.weight(1f),
@@ -240,11 +215,11 @@ fun HomeScreen(
                 }
             } else {
                 PortraitMapAndResults(
-                    state = filteredState,
-                    mapEarthquakes = mapEarthquakes,
-                    resultCount = visibleEarthquakes.size,
-                    viewportActive = mapViewport != null,
-                    filtersExcludedAll = filtersExcludedAll,
+                    state = state,
+                    mapEarthquakes = state.mapEarthquakes,
+                    resultCount = state.resultEarthquakes.size,
+                    viewportActive = state.mapViewport != null,
+                    filtersExcludedAll = state.filtersExcludedAll,
                     mapType = mapType,
                     cameraFocus = cameraFocus,
                     cameraFocusKey = cameraFocusKey,
@@ -256,7 +231,7 @@ fun HomeScreen(
                     onResetFilters = ::resetFilters,
                     onMapTypeChanged = { mapTypeName = it.name },
                     onLocate = ::locateMap,
-                    onViewportChanged = { mapViewport = it },
+                    onViewportChanged = onViewportChanged,
                     mapsConfigured = mapsConfigured,
                 )
             }
@@ -503,7 +478,7 @@ private fun MapSurface(
         EarthquakeMap(
             earthquakes = mapEarthquakes,
             userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
-            selectedEventId = state.selectedEventId?.takeIf { selected -> state.snapshot?.earthquakes?.any { it.id == selected } == true },
+            selectedEventId = state.selectedEventId?.takeIf { selected -> state.resultEarthquakes.any { it.id == selected } },
             onOpenDetails = onOpenDetails,
             mapsConfigured = mapsConfigured,
             mapType = mapType,
@@ -612,13 +587,14 @@ private fun HomeModeContent(
         when {
             state.isInitialLoading -> LoadingState()
             state.isFullScreenFailure -> FailureState(onRefresh)
-            state.snapshot?.earthquakes?.isEmpty() == true -> EmptyState(filtersExcludedAll)
+            state.snapshot != null && state.resultEarthquakes.isEmpty() -> EmptyState(filtersExcludedAll)
             else ->
                 EarthquakeList(
-                    earthquakes = state.snapshot?.earthquakes.orEmpty(),
+                    earthquakes = state.resultEarthquakes,
                     refreshing = state.refreshStatus is RefreshStatus.Refreshing,
                     refreshFailed = state.refreshStatus is RefreshStatus.Failed,
                     lastUpdatedAt = state.snapshot?.lastSuccessfulRetrieval,
+                    now = state.asOf,
                     newEventIds = state.newEventIds,
                     onRefresh = onRefresh,
                     onEventSelected = onEventSelected,
@@ -662,7 +638,7 @@ private fun CompactResultsHeader(
                 val freshness =
                     EarthquakeFormatter.relativeTime(
                         occurredAt = state.snapshot.lastSuccessfulRetrieval,
-                        now = Instant.now(),
+                        now = state.asOf,
                         locale = locale,
                         zoneId = java.time.ZoneId.systemDefault(),
                     )
@@ -689,8 +665,7 @@ private fun SituationSummaryCard(
     showTitle: Boolean = true,
     showLocationAction: Boolean = true,
 ) {
-    val calculator = SituationSummaryCalculator()
-    val summary = calculator.calculate(state.snapshot, state.refreshStatus is RefreshStatus.Failed, state.locationContext)
+    val summary = state.summary
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     var showLocationExplanation by remember { mutableStateOf(false) }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -761,7 +736,7 @@ private fun SituationSummaryCard(
             val freshness =
                 EarthquakeFormatter.relativeTime(
                     occurredAt = snapshot.lastSuccessfulRetrieval,
-                    now = java.time.Instant.now(),
+                    now = state.asOf,
                     locale = locale,
                     zoneId = java.time.ZoneId.systemDefault(),
                 )

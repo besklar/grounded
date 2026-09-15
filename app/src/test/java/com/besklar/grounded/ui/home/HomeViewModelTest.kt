@@ -127,6 +127,26 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `map viewport projects the shared result set without changing map input`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val inside = earthquake("inside", magnitude = 2.0, coordinates = Coordinates(39.7, -104.9))
+        val outside = earthquake("outside", magnitude = 3.0, coordinates = Coordinates(20.0, 20.0))
+        val repository =
+            FakeRepository(
+                result = RefreshResult.Success(emptySet(), 0, 0),
+                initialSnapshot = snapshot(events = listOf(inside, outside)),
+            )
+        val viewModel = viewModel(repository)
+        runCurrent()
+
+        viewModel.updateMapViewport(MapViewport(south = 39.0, west = -106.0, north = 41.0, east = -103.0))
+
+        assertEquals(listOf("inside"), viewModel.uiState.value.resultEarthquakes.map(Earthquake::id))
+        assertEquals(setOf("inside", "outside"), viewModel.uiState.value.mapEarthquakes.map(Earthquake::id).toSet())
+        assertEquals(true, viewModel.uiState.value.mapViewport != null)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
     fun `filters restore from saved state and reset to defaults`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
         val savedState =
             SavedStateHandle(
@@ -297,7 +317,11 @@ class HomeViewModelTest {
 
     private fun snapshot(retrievedAt: Instant = now, events: List<Earthquake> = emptyList()) = EarthquakeSnapshot(events, "past_7_days", retrievedAt, retrievedAt, null, "USGS")
 
-    private fun earthquake(id: String, magnitude: Double) = Earthquake(id, magnitude, null, id, now, now, null, null, null, null, null, null, null, null)
+    private fun earthquake(
+        id: String,
+        magnitude: Double,
+        coordinates: Coordinates? = null,
+    ) = Earthquake(id, magnitude, null, id, now, now, coordinates, null, null, null, null, null, null, null)
 
     private class FakeRepository(
         private val result: RefreshResult? = null,

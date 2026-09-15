@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.RefreshResult
-import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.location.LocationRepository
 import com.besklar.grounded.location.LocationSearchRepository
 import com.besklar.grounded.location.LocationSearchResult
@@ -21,10 +20,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.Clock
-import java.time.Duration
 import javax.inject.Inject
 
 @HiltViewModel
@@ -39,18 +38,22 @@ constructor(
 ) : ViewModel() {
     private val mutableUiState =
         MutableStateFlow(
-            HomeUiState(
-                mode = savedEnum(MODE_KEY, HomeMode.MAP),
-                filters =
-                HomeFilters(
-                    timeRange = savedEnum(TIME_RANGE_KEY, TimeRange.PAST_DAY),
-                    magnitude = savedEnum(MAGNITUDE_KEY, MagnitudeFilter.ALL),
-                    order = savedEnum(ORDER_KEY, EarthquakeOrder.RECENT),
-                    distance = savedEnum(DISTANCE_KEY, DistanceFilter.FIVE_HUNDRED),
+            HomeStateProjector.project(
+                state =
+                HomeUiState(
+                    mode = savedEnum(MODE_KEY, HomeMode.MAP),
+                    filters =
+                    HomeFilters(
+                        timeRange = savedEnum(TIME_RANGE_KEY, TimeRange.PAST_DAY),
+                        magnitude = savedEnum(MAGNITUDE_KEY, MagnitudeFilter.ALL),
+                        order = savedEnum(ORDER_KEY, EarthquakeOrder.RECENT),
+                        distance = savedEnum(DISTANCE_KEY, DistanceFilter.FIVE_HUNDRED),
+                    ),
+                    searchQuery = savedStateHandle[SEARCH_QUERY_KEY] ?: "",
+                    searchScope = restoredSearchScope(),
+                    searchStatus = if (savedStateHandle.get<String>(SEARCH_LABEL_KEY) != null) SearchStatus.Resolved else SearchStatus.Idle,
                 ),
-                searchQuery = savedStateHandle[SEARCH_QUERY_KEY] ?: "",
-                searchScope = restoredSearchScope(),
-                searchStatus = if (savedStateHandle.get<String>(SEARCH_LABEL_KEY) != null) SearchStatus.Resolved else SearchStatus.Idle,
+                now = clock.instant(),
             ),
         )
     val uiState: StateFlow<HomeUiState> = mutableUiState.asStateFlow()
@@ -66,30 +69,23 @@ constructor(
     init {
         viewModelScope.launch {
             repository.observeSnapshot().collectLatest { snapshot ->
-                val current = mutableUiState.value
-                mutableUiState.value =
+                updateUiState { current ->
                     current.copy(
                         snapshot = snapshot,
-                        dataAge = snapshot?.let { Duration.between(it.lastSuccessfulRetrieval, clock.instant()).coerceAtLeast(Duration.ZERO) },
-                        selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(snapshot, current.filters, current.locationContext, current.searchScope) },
                     )
+                }
                 initialSnapshotObserved.complete(Unit)
             }
         }
         viewModelScope.launch {
             locationRepository.context.collectLatest { context ->
-                mutableUiState.value = mutableUiState.value.copy(locationContext = context)
+                updateUiState { it.copy(locationContext = context) }
             }
         }
         viewModelScope.launch {
             while (isActive) {
                 delay(FRESHNESS_TICK_MILLIS)
-                mutableUiState.value.snapshot?.let { snapshot ->
-                    mutableUiState.value =
-                        mutableUiState.value.copy(
-                            dataAge = Duration.between(snapshot.lastSuccessfulRetrieval, clock.instant()).coerceAtLeast(Duration.ZERO),
-                        )
-                }
+                updateUiState { it }
             }
         }
         refresh()
@@ -97,11 +93,15 @@ constructor(
 
     fun selectMode(mode: HomeMode) {
         savedStateHandle[MODE_KEY] = mode.name
-        mutableUiState.value = mutableUiState.value.copy(mode = mode)
+        updateUiState { it.copy(mode = mode) }
     }
 
     fun selectEvent(id: String?) {
-        mutableUiState.value = mutableUiState.value.copy(selectedEventId = id)
+        updateUiState { it.copy(selectedEventId = id) }
+    }
+
+    fun updateMapViewport(viewport: MapViewport) {
+        updateUiState { it.copy(mapViewport = viewport) }
     }
 
     fun updateFilters(filters: HomeFilters) {
@@ -109,12 +109,15 @@ constructor(
         savedStateHandle[MAGNITUDE_KEY] = filters.magnitude.name
         savedStateHandle[ORDER_KEY] = filters.order.name
         savedStateHandle[DISTANCE_KEY] = filters.distance.name
-        val current = mutableUiState.value
-        mutableUiState.value =
+        updateUiState { current ->
             current.copy(
                 filters = filters,
-                selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(current.snapshot, filters, current.locationContext, current.searchScope) },
+                mapViewport =
+                current.mapViewport.takeUnless {
+                    filters.distance != current.filters.distance && current.searchScope != null
+                },
             )
+        }
     }
 
     fun updateSearchQuery(query: String) {
@@ -124,16 +127,17 @@ constructor(
             searchJob = null
         }
         savedStateHandle[SEARCH_QUERY_KEY] = query
-        mutableUiState.value =
-            current.copy(
+        updateUiState { state ->
+            state.copy(
                 searchQuery = query,
                 searchStatus =
-                if (current.searchStatus is SearchStatus.Error || current.searchStatus is SearchStatus.Searching) {
-                    if (current.searchScope == null) SearchStatus.Idle else SearchStatus.Resolved
+                if (state.searchStatus is SearchStatus.Error || state.searchStatus is SearchStatus.Searching) {
+                    if (state.searchScope == null) SearchStatus.Idle else SearchStatus.Resolved
                 } else {
-                    current.searchStatus
+                    state.searchStatus
                 },
             )
+        }
     }
 
     fun submitSearch() {
@@ -145,7 +149,7 @@ constructor(
         searchJob?.cancel()
         searchJob =
             viewModelScope.launch {
-                mutableUiState.value = mutableUiState.value.copy(searchStatus = SearchStatus.Searching)
+                updateUiState { it.copy(searchStatus = SearchStatus.Searching, mapViewport = null) }
                 when (val result = locationSearchRepository.search(query)) {
                     is LocationSearchResult.Success -> applySearchScope(query, result.scope)
                     LocationSearchResult.NotFound -> setSearchFailure(SearchFailure.NOT_FOUND)
@@ -161,8 +165,15 @@ constructor(
         savedStateHandle.remove<String>(SEARCH_LABEL_KEY)
         savedStateHandle.remove<Double>(SEARCH_LATITUDE_KEY)
         savedStateHandle.remove<Double>(SEARCH_LONGITUDE_KEY)
-        val current = mutableUiState.value
-        mutableUiState.value = current.copy(searchQuery = "", searchScope = null, searchStatus = SearchStatus.Idle, selectedEventId = null)
+        updateUiState {
+            it.copy(
+                searchQuery = "",
+                searchScope = null,
+                searchStatus = SearchStatus.Idle,
+                selectedEventId = null,
+                mapViewport = null,
+            )
+        }
     }
 
     fun resetFilters() {
@@ -183,7 +194,7 @@ constructor(
             viewModelScope.launch {
                 initialSnapshotObserved.await()
                 val hadSnapshotBeforeRefresh = mutableUiState.value.snapshot != null
-                mutableUiState.value = mutableUiState.value.copy(refreshStatus = RefreshStatus.Refreshing)
+                updateUiState { it.copy(refreshStatus = RefreshStatus.Refreshing) }
                 var newEventIds = emptySet<String>()
                 val status =
                     when (val result = repository.refresh()) {
@@ -196,19 +207,20 @@ constructor(
                         RefreshResult.TransportFailure,
                         -> RefreshStatus.Failed
                     }
-                mutableUiState.value =
-                    mutableUiState.value.copy(
+                updateUiState {
+                    it.copy(
                         refreshStatus = status,
                         initialAttemptFinished = true,
                         newEventIds = newEventIds,
                     )
+                }
                 if (newEventIds.isNotEmpty()) {
                     mutableEffects.tryEmit(HomeEffect.NewEarthquakes)
                     clearNewEventsJob?.cancel()
                     clearNewEventsJob =
                         viewModelScope.launch {
                             delay(NEW_EVENT_DURATION_MILLIS)
-                            mutableUiState.value = mutableUiState.value.copy(newEventIds = emptySet())
+                            updateUiState { it.copy(newEventIds = emptySet()) }
                         }
                 }
                 clearRefreshStatusJob?.cancel()
@@ -216,7 +228,7 @@ constructor(
                     viewModelScope.launch {
                         delay(REFRESH_CONFIRMATION_MILLIS)
                         if (mutableUiState.value.refreshStatus is RefreshStatus.Success) {
-                            mutableUiState.value = mutableUiState.value.copy(refreshStatus = RefreshStatus.Idle)
+                            updateUiState { it.copy(refreshStatus = RefreshStatus.Idle) }
                         }
                     }
             }
@@ -239,31 +251,28 @@ constructor(
 
     private inline fun <reified T : Enum<T>> savedEnum(key: String, default: T): T = savedStateHandle.get<String>(key)?.let { value -> runCatching { enumValueOf<T>(value) }.getOrNull() } ?: default
 
-    private fun visibleIds(
-        snapshot: com.besklar.grounded.model.EarthquakeSnapshot?,
-        filters: HomeFilters,
-        locationContext: LocationContext,
-        searchScope: SearchScope?,
-    ): Set<String> = EarthquakeFilter
-        .apply(
-            earthquakes = snapshot?.earthquakes.orEmpty(),
-            filters = filters,
-            now = clock.instant(),
-            userCoordinates = (locationContext as? LocationContext.Available)?.coordinates,
-            searchScope = searchScope,
-        ).mapTo(mutableSetOf()) { it.id }
-
     private fun applySearchScope(query: String, scope: SearchScope) {
         savedStateHandle[SEARCH_QUERY_KEY] = query
         savedStateHandle[SEARCH_LABEL_KEY] = scope.label
         savedStateHandle[SEARCH_LATITUDE_KEY] = scope.center.latitude
         savedStateHandle[SEARCH_LONGITUDE_KEY] = scope.center.longitude
-        val current = mutableUiState.value
-        mutableUiState.value = current.copy(searchQuery = query, searchScope = scope, searchStatus = SearchStatus.Resolved, selectedEventId = null)
+        updateUiState {
+            it.copy(
+                searchQuery = query,
+                searchScope = scope,
+                searchStatus = SearchStatus.Resolved,
+                selectedEventId = null,
+                mapViewport = null,
+            )
+        }
     }
 
     private fun setSearchFailure(failure: SearchFailure) {
-        mutableUiState.value = mutableUiState.value.copy(searchStatus = SearchStatus.Error(failure))
+        updateUiState { it.copy(searchStatus = SearchStatus.Error(failure)) }
+    }
+
+    private fun updateUiState(transform: (HomeUiState) -> HomeUiState) {
+        mutableUiState.update { current -> HomeStateProjector.project(transform(current), clock.instant()) }
     }
 
     private fun restoredSearchScope(): SearchScope? {

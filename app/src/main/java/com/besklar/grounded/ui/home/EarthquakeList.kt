@@ -21,7 +21,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -45,6 +44,7 @@ fun EarthquakeList(
     refreshing: Boolean,
     refreshFailed: Boolean,
     lastUpdatedAt: Instant?,
+    now: Instant,
     newEventIds: Set<String>,
     onRefresh: () -> Unit,
     onEventSelected: (String) -> Unit,
@@ -69,7 +69,7 @@ fun EarthquakeList(
                     val locale = LocalConfiguration.current.locales[0]
                     val age =
                         lastUpdatedAt?.let {
-                            EarthquakeFormatter.relativeTime(it, Instant.now(), locale, ZoneId.systemDefault())
+                            EarthquakeFormatter.relativeTime(it, now, locale, ZoneId.systemDefault())
                         } ?: stringResource(R.string.unknown_time)
                     Surface(
                         color = MaterialTheme.colorScheme.errorContainer,
@@ -90,6 +90,7 @@ fun EarthquakeList(
                     isNew = earthquake.id in newEventIds,
                     onClick = { onEventSelected(earthquake.id) },
                     userCoordinates = userCoordinates,
+                    now = now,
                 )
             }
         }
@@ -102,9 +103,9 @@ private fun EarthquakeRow(
     isNew: Boolean,
     onClick: () -> Unit,
     userCoordinates: Coordinates?,
+    now: Instant,
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val now = remember { Instant.now() }
     val magnitude = EarthquakeFormatter.magnitude(earthquake, locale)
     val place = EarthquakeFormatter.place(earthquake, locale)
     val relativeTime = EarthquakeFormatter.relativeTime(earthquake.occurredAt, now, locale, ZoneId.systemDefault())

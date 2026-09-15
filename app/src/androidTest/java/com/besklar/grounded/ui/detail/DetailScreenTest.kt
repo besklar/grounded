@@ -32,6 +32,7 @@ class DetailScreenTest {
                     relativeLocation = null,
                     isLoading = false,
                     onBack = { wentBack = true },
+                    asOf = Instant.parse("2026-09-13T20:00:00Z"),
                 )
             }
         }
@@ -52,6 +53,7 @@ class DetailScreenTest {
                         relativeLocation = null,
                         isLoading = false,
                         onBack = {},
+                        asOf = Instant.parse("2026-09-13T20:00:00Z"),
                     )
                 }
             }
@@ -71,6 +73,7 @@ class DetailScreenTest {
                     isLoading = false,
                     onBack = {},
                     mapsConfigured = false,
+                    asOf = Instant.parse("2026-09-13T20:00:00Z"),
                 )
             }
         }
@@ -92,6 +95,7 @@ class DetailScreenTest {
                     onBack = {},
                     onRefresh = { refreshRequested = true },
                     mapsConfigured = false,
+                    asOf = Instant.parse("2026-09-13T20:00:00Z"),
                 )
             }
         }
@@ -113,6 +117,7 @@ class DetailScreenTest {
                     onBack = {},
                     refreshFailed = true,
                     mapsConfigured = false,
+                    asOf = Instant.parse("2026-09-13T20:00:00Z"),
                 )
             }
         }

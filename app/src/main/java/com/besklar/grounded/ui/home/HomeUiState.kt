@@ -2,8 +2,10 @@ package com.besklar.grounded.ui.home
 
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.location.SearchScope
+import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
 import java.time.Duration
+import java.time.Instant
 
 enum class HomeMode {
     MAP,
@@ -49,12 +51,25 @@ data class HomeUiState(
     val searchQuery: String = "",
     val searchScope: SearchScope? = null,
     val searchStatus: SearchStatus = SearchStatus.Idle,
+    val mapEarthquakes: List<Earthquake> = snapshot?.earthquakes.orEmpty(),
+    val resultEarthquakes: List<Earthquake> = snapshot?.earthquakes.orEmpty(),
+    val mapViewport: MapViewport? = null,
+    val asOf: Instant = snapshot?.lastSuccessfulRetrieval ?: Instant.EPOCH,
+    val summary: SituationSummary =
+        SituationSummaryCalculator().calculate(
+            snapshot?.copy(earthquakes = resultEarthquakes),
+            refreshStatus is RefreshStatus.Failed,
+            locationContext,
+        ),
 ) {
     val isInitialLoading: Boolean
         get() = snapshot == null && !initialAttemptFinished
 
     val isFullScreenFailure: Boolean
         get() = snapshot == null && initialAttemptFinished && refreshStatus is RefreshStatus.Failed
+
+    val filtersExcludedAll: Boolean
+        get() = snapshot?.earthquakes?.isNotEmpty() == true && resultEarthquakes.isEmpty()
 }
 
 sealed interface HomeEffect {

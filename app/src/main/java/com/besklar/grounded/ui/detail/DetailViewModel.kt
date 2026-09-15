@@ -12,12 +12,17 @@ import com.besklar.grounded.location.RelativeLocationCalculator
 import com.besklar.grounded.model.Earthquake
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 
 data class DetailUiState(
@@ -26,6 +31,7 @@ data class DetailUiState(
     val isResolved: Boolean = false,
     val isRefreshing: Boolean = false,
     val refreshFailed: Boolean = false,
+    val asOf: Instant = Instant.EPOCH,
 )
 
 @HiltViewModel
@@ -35,13 +41,14 @@ constructor(
     private val repository: EarthquakeRepository,
     locationRepository: LocationRepository,
     savedStateHandle: SavedStateHandle,
+    private val clock: Clock,
 ) : ViewModel() {
     private val eventId: String = checkNotNull(savedStateHandle["eventId"])
     private val refreshState = MutableStateFlow(DetailRefreshState.IDLE)
     private var refreshJob: Job? = null
 
     val uiState: StateFlow<DetailUiState> =
-        combine(repository.observeSnapshot(), locationRepository.context, refreshState) { snapshot, location, refresh ->
+        combine(repository.observeSnapshot(), locationRepository.context, refreshState, observeCurrentTime()) { snapshot, location, refresh, asOf ->
             val earthquake = snapshot?.earthquakes?.firstOrNull { it.id == eventId }
             val relative =
                 (location as? LocationContext.Available)?.coordinates?.let { user ->
@@ -53,6 +60,7 @@ constructor(
                 isResolved = snapshot != null,
                 isRefreshing = refresh == DetailRefreshState.REFRESHING,
                 refreshFailed = refresh == DetailRefreshState.FAILED,
+                asOf = asOf,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailUiState())
 
@@ -70,6 +78,17 @@ constructor(
                         -> DetailRefreshState.FAILED
                     }
             }
+    }
+
+    private companion object {
+        const val TIME_TICK_MILLIS = 60_000L
+    }
+
+    private fun observeCurrentTime(): Flow<Instant> = flow {
+        while (true) {
+            emit(clock.instant())
+            delay(TIME_TICK_MILLIS)
+        }
     }
 }
 

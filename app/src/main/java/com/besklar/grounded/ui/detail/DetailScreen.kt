@@ -72,6 +72,7 @@ fun DetailScreen(
     earthquake: Earthquake?,
     relativeLocation: RelativeLocation?,
     isLoading: Boolean,
+    asOf: Instant,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     mapsConfigured: Boolean = BuildConfig.MAPS_CONFIGURED,
@@ -114,6 +115,7 @@ fun DetailScreen(
                     relativeLocation = relativeLocation,
                     mapsConfigured = mapsConfigured,
                     refreshFailed = refreshFailed,
+                    asOf = asOf,
                 )
             }
         }
@@ -126,11 +128,11 @@ private fun DetailContent(
     relativeLocation: RelativeLocation?,
     mapsConfigured: Boolean,
     refreshFailed: Boolean,
+    asOf: Instant,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
-    val now = remember { Instant.now() }
     val zoneId = ZoneId.systemDefault()
     val number = remember(locale) { NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 1 } }
     val coordinateNumber = remember(locale) { NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 3 } }
@@ -141,7 +143,7 @@ private fun DetailContent(
                 .apply { timeZone = java.util.TimeZone.getTimeZone(zoneId) }
                 .format(Date.from(earthquake.occurredAt))
         }
-    val shareText = remember(earthquake, locale, now, zoneId) { buildShareText(earthquake, locale, now, zoneId) }
+    val shareText = remember(earthquake, locale, asOf, zoneId) { buildShareText(earthquake, locale, asOf, zoneId) }
     val safeUrl = remember(earthquake.detailUrl) { safeUsgsUrl(earthquake.detailUrl) }
 
     Column(
@@ -162,7 +164,7 @@ private fun DetailContent(
                 )
             }
         }
-        EarthquakeHero(earthquake, EarthquakeFormatter.relativeTime(earthquake.occurredAt, now, locale, zoneId), locale)
+        EarthquakeHero(earthquake, EarthquakeFormatter.relativeTime(earthquake.occurredAt, asOf, locale, zoneId), locale)
 
         earthquake.coordinates?.let { coordinates ->
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
