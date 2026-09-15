@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -48,6 +50,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -77,6 +80,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.besklar.grounded.R
 import com.besklar.grounded.location.LocationContext
@@ -291,7 +295,12 @@ private fun PortraitMapAndResults(
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val expanded = sheetState.currentValue == SheetValue.Expanded || sheetState.targetValue == SheetValue.Expanded
-    val resultLabel = pluralStringResource(R.plurals.results_count, resultCount, resultCount)
+    val resultLabel =
+        if (state.isFullScreenFailure) {
+            stringResource(R.string.results_unavailable)
+        } else {
+            pluralStringResource(R.plurals.results_count, resultCount, resultCount)
+        }
     val expandResultLabel = stringResource(R.string.expand_results_description, resultLabel)
     val showMapDescription = stringResource(R.string.show_map_description)
 
@@ -504,28 +513,34 @@ private fun MapSurface(
             onViewportChanged = onViewportChanged,
             showRecenterButton = false,
         )
+        val showingFullScreenFailure = showStatusOverlay && state.isFullScreenFailure
         if (showStatusOverlay && state.isInitialLoading) {
             LoadingState()
-        } else if (showStatusOverlay && state.isFullScreenFailure) {
-            FailureState(onRefresh)
+        } else if (showingFullScreenFailure) {
+            FailureState(
+                onRetry = onRefresh,
+                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+            )
         }
-        Column(
-            modifier = Modifier.align(Alignment.CenterStart).padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MapTypeControl(mapType, onMapTypeChanged)
-            FilledTonalIconButton(
-                onClick = {
-                    if (state.locationContext is LocationContext.Available) onLocate() else showLocationExplanation = true
-                },
+        if (!showingFullScreenFailure) {
+            Column(
+                modifier = Modifier.align(Alignment.CenterStart).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(Icons.Rounded.MyLocation, contentDescription = stringResource(R.string.locate_me))
-            }
-            FilledTonalIconButton(
-                onClick = onRefresh,
-                enabled = state.refreshStatus !is RefreshStatus.Refreshing,
-            ) {
-                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.refresh))
+                MapTypeControl(mapType, onMapTypeChanged)
+                FilledTonalIconButton(
+                    onClick = {
+                        if (state.locationContext is LocationContext.Available) onLocate() else showLocationExplanation = true
+                    },
+                ) {
+                    Icon(Icons.Rounded.MyLocation, contentDescription = stringResource(R.string.locate_me))
+                }
+                FilledTonalIconButton(
+                    onClick = onRefresh,
+                    enabled = state.refreshStatus !is RefreshStatus.Refreshing,
+                ) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.refresh))
+                }
             }
         }
     }
@@ -1045,10 +1060,36 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun FailureState(onRetry: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.could_not_load), style = MaterialTheme.typography.titleLarge)
-        androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+private fun FailureState(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.widthIn(max = 400.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 4.dp,
+        shadowElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.could_not_load),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = stringResource(R.string.could_not_load_explanation),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+        }
     }
 }
 

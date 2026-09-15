@@ -19,6 +19,8 @@
     <string name="no_results_explanation">No earthquakes were reported in the selected time window.</string>
     <string name="loading_earthquakes">Loading recent earthquakes</string>
     <string name="could_not_load">Earthquake data is unavailable</string>
+    <string name="could_not_load_explanation">We couldn’t reach the earthquake feed. Check your connection and try again.</string>
+    <string name="results_unavailable">Results unavailable</string>
     <string name="retry">Retry</string>
     <string name="map_configuration_needed">Map setup needed</string>
     <string name="map_configuration_explanation">Add MAPS_API_KEY to local.properties, then rebuild. The earthquake list remains available without it.</string>

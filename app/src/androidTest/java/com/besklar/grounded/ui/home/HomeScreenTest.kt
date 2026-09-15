@@ -84,6 +84,10 @@ class HomeScreenTest {
         }
 
         composeRule.onNodeWithText("Earthquake data is unavailable").assertIsDisplayed()
+        composeRule.onNodeWithText("We couldn’t reach the earthquake feed", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Results unavailable").assertIsDisplayed()
+        composeRule.onNodeWithText("0 results").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Refresh earthquake data").assertDoesNotExist()
         composeRule.onNodeWithText("Retry").performClick()
         composeRule.runOnIdle { assertEquals(true, retried) }
     }
