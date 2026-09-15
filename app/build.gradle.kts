@@ -7,7 +7,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.secrets)
 }
 
 val localProperties =
@@ -16,6 +15,7 @@ val localProperties =
         if (file.exists()) file.inputStream().use { load(it) }
     }
 val mapsConfigured = localProperties.getProperty("MAPS_API_KEY").orEmpty().isNotBlank()
+val mapsApiKey = localProperties.getProperty("MAPS_API_KEY").orEmpty().ifBlank { "DEFAULT_API_KEY" }
 
 android {
     namespace = "com.besklar.grounded"
@@ -31,6 +31,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
         buildConfigField("boolean", "MAPS_CONFIGURED", mapsConfigured.toString())
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildFeatures {
@@ -62,12 +63,6 @@ kotlin {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
-}
-
-secrets {
-    propertiesFileName = "local.properties"
-    defaultPropertiesFileName = "local.defaults.properties"
-    ignoreList.add("keyToIgnore")
 }
 
 dependencies {
