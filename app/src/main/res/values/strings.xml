@@ -108,7 +108,10 @@
     </plurals>
     <string name="filter_earthquakes">Filter earthquakes</string>
     <string name="filter_summary">%1$s · %2$s · %3$s</string>
+    <string name="filter_summary_with_distance">%1$s · %2$s · %3$s · within %4$s</string>
     <string name="time_range">Time range</string>
+    <string name="search_radius">Search radius</string>
+    <string name="search_radius_requires_place">Search for a city or postal code to apply this distance.</string>
     <string name="magnitude">Magnitude</string>
     <string name="ordering">Ordering</string>
     <string name="past_hour">past hour</string>

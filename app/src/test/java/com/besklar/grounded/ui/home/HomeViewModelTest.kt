@@ -134,6 +134,7 @@ class HomeViewModelTest {
                     "time_range" to TimeRange.PAST_WEEK.name,
                     "magnitude_filter" to MagnitudeFilter.TWO_POINT_FIVE.name,
                     "earthquake_order" to EarthquakeOrder.STRONGEST.name,
+                    "earthquake_distance" to DistanceFilter.ONE_HUNDRED.name,
                 ),
             )
         val repository = FakeRepository(result = RefreshResult.Success(emptySet(), 0, 0))
@@ -142,7 +143,12 @@ class HomeViewModelTest {
         runCurrent()
 
         assertEquals(
-            HomeFilters(TimeRange.PAST_WEEK, MagnitudeFilter.TWO_POINT_FIVE, EarthquakeOrder.STRONGEST),
+            HomeFilters(
+                TimeRange.PAST_WEEK,
+                MagnitudeFilter.TWO_POINT_FIVE,
+                EarthquakeOrder.STRONGEST,
+                DistanceFilter.ONE_HUNDRED,
+            ),
             viewModel.uiState.value.filters,
         )
         viewModel.resetFilters()

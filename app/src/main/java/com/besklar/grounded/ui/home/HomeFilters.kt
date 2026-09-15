@@ -25,18 +25,33 @@ enum class EarthquakeOrder {
     STRONGEST,
 }
 
+enum class DistanceFilter(val miles: Int) {
+    FIFTY(50),
+    ONE_HUNDRED(100),
+    TWO_HUNDRED_FIFTY(250),
+    FIVE_HUNDRED(500),
+    ;
+
+    val radiusKilometers: Double
+        get() = miles / MILES_PER_KILOMETER
+
+    private companion object {
+        const val MILES_PER_KILOMETER = 0.621371
+    }
+}
+
 data class HomeFilters(
     val timeRange: TimeRange = TimeRange.PAST_DAY,
     val magnitude: MagnitudeFilter = MagnitudeFilter.ALL,
     val order: EarthquakeOrder = EarthquakeOrder.RECENT,
+    val distance: DistanceFilter = DistanceFilter.FIVE_HUNDRED,
 ) {
-    val activeCount: Int
-        get() =
-            listOf(
-                timeRange != DEFAULT.timeRange,
-                magnitude != DEFAULT.magnitude,
-                order != DEFAULT.order,
-            ).count { it }
+    fun activeCount(searchActive: Boolean = true): Int = listOf(
+        timeRange != DEFAULT.timeRange,
+        magnitude != DEFAULT.magnitude,
+        order != DEFAULT.order,
+        searchActive && distance != DEFAULT.distance,
+    ).count { it }
 
     companion object {
         val DEFAULT = HomeFilters()
@@ -60,7 +75,7 @@ object EarthquakeFilter {
                     } != false &&
                     searchScope?.let { scope ->
                         earthquake.coordinates?.let { coordinates ->
-                            RelativeLocationCalculator.calculate(scope.center, coordinates).distanceKilometers <= scope.radiusKilometers
+                            RelativeLocationCalculator.calculate(scope.center, coordinates).distanceKilometers <= filters.distance.radiusKilometers
                         } == true
                     } != false
             }

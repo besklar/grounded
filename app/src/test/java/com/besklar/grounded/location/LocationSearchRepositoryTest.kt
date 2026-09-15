@@ -11,7 +11,6 @@ class LocationSearchRepositoryTest {
 
         assertEquals("Denver, Colorado", result?.label)
         assertEquals(39.7, result?.center?.latitude ?: 0.0, 0.0)
-        assertEquals(SearchScope.DEFAULT_RADIUS_KILOMETERS, result?.radiusKilometers ?: 0.0, 0.0)
     }
 
     @Test

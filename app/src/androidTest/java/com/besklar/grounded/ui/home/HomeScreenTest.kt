@@ -184,12 +184,19 @@ class HomeScreenTest {
     }
 
     @Test
-    fun filterSheetChangesTimeRangeAndExplainsUnavailableNearestOrdering() {
-        var filters = HomeFilters.DEFAULT
+    fun filterSheetChangesTimeRangeAndDistanceAndExplainsUnavailableNearestOrdering() {
+        var filters by mutableStateOf(HomeFilters.DEFAULT)
         composeRule.setContent {
             GroundedTheme {
                 HomeScreen(
-                    state = HomeUiState(snapshot = snapshot(), mode = HomeMode.LIST, initialAttemptFinished = true, filters = filters),
+                    state =
+                    HomeUiState(
+                        snapshot = snapshot(),
+                        mode = HomeMode.LIST,
+                        initialAttemptFinished = true,
+                        filters = filters,
+                        searchScope = SearchScope("Denver, Colorado", Coordinates(39.7, -104.9)),
+                    ),
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
@@ -198,6 +205,7 @@ class HomeScreenTest {
                     onRequestLocation = {},
                     onFiltersChanged = { filters = it },
                     onResetFilters = {},
+                    mapsConfigured = false,
                 )
             }
         }
@@ -205,6 +213,8 @@ class HomeScreenTest {
         composeRule.onNodeWithText("Filters").performClick()
         composeRule.onNodeWithText("past hour").performClick()
         composeRule.runOnIdle { assertEquals(TimeRange.PAST_HOUR, filters.timeRange) }
+        composeRule.onNodeWithText("100 mi").performClick()
+        composeRule.runOnIdle { assertEquals(DistanceFilter.ONE_HUNDRED, filters.distance) }
         composeRule.onNodeWithText("nearest").assertIsNotEnabled()
         composeRule.onNodeWithText("Add approximate location to order by distance.").assertExists()
     }

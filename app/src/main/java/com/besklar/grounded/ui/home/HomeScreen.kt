@@ -133,6 +133,7 @@ fun HomeScreen(
                 query = state.searchQuery,
                 status = state.searchStatus,
                 scope = state.searchScope,
+                radiusKilometers = state.filters.distance.radiusKilometers,
                 onQueryChanged = onSearchQueryChanged,
                 onSearch = {
                     cameraIntent = "search"
@@ -168,6 +169,7 @@ fun HomeScreen(
                         FilterControls(
                             filters = state.filters,
                             locationAvailable = userCoordinates != null,
+                            searchActive = state.searchScope != null,
                             onFiltersChanged = onFiltersChanged,
                             onReset = onResetFilters,
                         )
@@ -298,6 +300,7 @@ private fun PortraitMapAndResults(
                             FilterControls(
                                 filters = state.filters,
                                 locationAvailable = state.locationContext is LocationContext.Available,
+                                searchActive = state.searchScope != null,
                                 onFiltersChanged = onFiltersChanged,
                                 onReset = onResetFilters,
                             )
@@ -357,6 +360,7 @@ private fun PlaceSearchBar(
     query: String,
     status: SearchStatus,
     scope: SearchScope?,
+    radiusKilometers: Double,
     onQueryChanged: (String) -> Unit,
     onSearch: () -> Unit,
     onClear: () -> Unit,
@@ -397,7 +401,7 @@ private fun PlaceSearchBar(
             SearchStatus.Resolved ->
                 scope?.let {
                     Text(
-                        stringResource(R.string.within_search_area, EarthquakeFormatter.distance(it.radiusKilometers, locale), it.label),
+                        stringResource(R.string.within_search_area, EarthquakeFormatter.distance(radiusKilometers, locale), it.label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -466,6 +470,7 @@ private fun MapSurface(
             FilterControls(
                 filters = filters,
                 locationAvailable = state.locationContext is LocationContext.Available,
+                searchActive = state.searchScope != null,
                 onFiltersChanged = onFiltersChanged,
                 onReset = onResetFilters,
                 compact = true,
@@ -619,7 +624,7 @@ private fun SituationSummaryCard(
                                 R.plurals.events_near_place,
                                 summary.eventCount,
                                 summary.eventCount,
-                                EarthquakeFormatter.distance(scope.radiusKilometers, locale),
+                                EarthquakeFormatter.distance(state.filters.distance.radiusKilometers, locale),
                                 scope.label,
                                 timeRangeLabel(state.filters.timeRange),
                             )
@@ -728,20 +733,22 @@ private fun SituationSummaryCard(
 private fun FilterControls(
     filters: HomeFilters,
     locationAvailable: Boolean,
+    searchActive: Boolean,
     onFiltersChanged: (HomeFilters) -> Unit,
     onReset: () -> Unit,
     compact: Boolean = false,
 ) {
     var showSheet by rememberSaveable { mutableStateOf(false) }
+    val activeFilterCount = filters.activeCount(searchActive)
     if (compact) {
         FilledTonalIconButton(onClick = { showSheet = true }) {
             Icon(
                 Icons.Rounded.Tune,
                 contentDescription =
-                if (filters.activeCount == 0) {
+                if (activeFilterCount == 0) {
                     stringResource(R.string.filters)
                 } else {
-                    pluralStringResource(R.plurals.filters_changed, filters.activeCount, filters.activeCount)
+                    pluralStringResource(R.plurals.filters_changed, activeFilterCount, activeFilterCount)
                 },
             )
         }
@@ -751,25 +758,39 @@ private fun FilterControls(
                 Icon(Icons.Rounded.Tune, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (filters.activeCount == 0) {
+                    if (activeFilterCount == 0) {
                         stringResource(R.string.filters)
                     } else {
-                        pluralStringResource(R.plurals.filters_changed, filters.activeCount, filters.activeCount)
+                        pluralStringResource(R.plurals.filters_changed, activeFilterCount, activeFilterCount)
                     },
                 )
             }
             Text(
                 text =
-                stringResource(
-                    R.string.filter_summary,
-                    timeRangeLabel(filters.timeRange),
-                    magnitudeLabel(filters.magnitude),
-                    if (filters.order == EarthquakeOrder.NEAREST && !locationAvailable) {
-                        stringResource(R.string.nearest_unavailable_summary)
-                    } else {
-                        orderLabel(filters.order)
-                    },
-                ),
+                if (searchActive) {
+                    stringResource(
+                        R.string.filter_summary_with_distance,
+                        timeRangeLabel(filters.timeRange),
+                        magnitudeLabel(filters.magnitude),
+                        if (filters.order == EarthquakeOrder.NEAREST && !locationAvailable) {
+                            stringResource(R.string.nearest_unavailable_summary)
+                        } else {
+                            orderLabel(filters.order)
+                        },
+                        distanceLabel(filters.distance),
+                    )
+                } else {
+                    stringResource(
+                        R.string.filter_summary,
+                        timeRangeLabel(filters.timeRange),
+                        magnitudeLabel(filters.magnitude),
+                        if (filters.order == EarthquakeOrder.NEAREST && !locationAvailable) {
+                            stringResource(R.string.nearest_unavailable_summary)
+                        } else {
+                            orderLabel(filters.order)
+                        },
+                    )
+                },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -791,6 +812,18 @@ private fun FilterControls(
                             label = timeRangeLabel(option),
                             selected = option == filters.timeRange,
                             onClick = { onFiltersChanged(filters.copy(timeRange = option)) },
+                        )
+                    }
+                }
+                HorizontalDivider()
+                FilterSection(title = stringResource(R.string.search_radius)) {
+                    DistanceFilter.entries.forEach { option ->
+                        FilterOption(
+                            label = distanceLabel(option),
+                            supportingText = if (searchActive) null else stringResource(R.string.search_radius_requires_place),
+                            selected = option == filters.distance,
+                            enabled = searchActive,
+                            onClick = { onFiltersChanged(filters.copy(distance = option)) },
                         )
                     }
                 }
@@ -889,6 +922,12 @@ private fun magnitudeLabel(value: MagnitudeFilter): String = stringResource(
         MagnitudeFilter.FOUR_POINT_FIVE -> R.string.magnitude_4_5_plus
     },
 )
+
+@Composable
+private fun distanceLabel(value: DistanceFilter): String {
+    val locale = LocalConfiguration.current.locales[0]
+    return EarthquakeFormatter.distance(value.radiusKilometers, locale)
+}
 
 @Composable
 private fun orderLabel(value: EarthquakeOrder): String = stringResource(

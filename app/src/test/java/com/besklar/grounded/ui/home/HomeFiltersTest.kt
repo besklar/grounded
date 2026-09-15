@@ -94,6 +94,24 @@ class HomeFiltersTest {
     }
 
     @Test
+    fun `search distance can narrow the geographic scope`() {
+        val result =
+            EarthquakeFilter.apply(
+                earthquakes =
+                listOf(
+                    earthquake("inside-100", 3.0, 1, Coordinates(1.0, 0.0)),
+                    earthquake("outside-100", 3.0, 1, Coordinates(2.0, 0.0)),
+                ),
+                filters = HomeFilters(distance = DistanceFilter.ONE_HUNDRED),
+                now = now,
+                userCoordinates = null,
+                searchScope = SearchScope("Origin", Coordinates(0.0, 0.0)),
+            )
+
+        assertEquals(listOf("inside-100"), result.map(Earthquake::id))
+    }
+
+    @Test
     fun `search scope handles the antimeridian`() {
         val result =
             EarthquakeFilter.apply(

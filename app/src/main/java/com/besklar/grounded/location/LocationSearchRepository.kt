@@ -20,12 +20,7 @@ import kotlin.coroutines.resumeWithException
 data class SearchScope(
     val label: String,
     val center: Coordinates,
-    val radiusKilometers: Double = DEFAULT_RADIUS_KILOMETERS,
-) {
-    companion object {
-        const val DEFAULT_RADIUS_KILOMETERS = 805.0
-    }
-}
+)
 
 sealed interface LocationSearchResult {
     data class Success(val scope: SearchScope) : LocationSearchResult

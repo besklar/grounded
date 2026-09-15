@@ -46,6 +46,7 @@ constructor(
                     timeRange = savedEnum(TIME_RANGE_KEY, TimeRange.PAST_DAY),
                     magnitude = savedEnum(MAGNITUDE_KEY, MagnitudeFilter.ALL),
                     order = savedEnum(ORDER_KEY, EarthquakeOrder.RECENT),
+                    distance = savedEnum(DISTANCE_KEY, DistanceFilter.FIVE_HUNDRED),
                 ),
                 searchQuery = savedStateHandle[SEARCH_QUERY_KEY] ?: "",
                 searchScope = restoredSearchScope(),
@@ -107,6 +108,7 @@ constructor(
         savedStateHandle[TIME_RANGE_KEY] = filters.timeRange.name
         savedStateHandle[MAGNITUDE_KEY] = filters.magnitude.name
         savedStateHandle[ORDER_KEY] = filters.order.name
+        savedStateHandle[DISTANCE_KEY] = filters.distance.name
         val current = mutableUiState.value
         mutableUiState.value =
             current.copy(
@@ -220,6 +222,7 @@ constructor(
         const val TIME_RANGE_KEY = "time_range"
         const val MAGNITUDE_KEY = "magnitude_filter"
         const val ORDER_KEY = "earthquake_order"
+        const val DISTANCE_KEY = "earthquake_distance"
         const val SEARCH_QUERY_KEY = "search_query"
         const val SEARCH_LABEL_KEY = "search_label"
         const val SEARCH_LATITUDE_KEY = "search_latitude"

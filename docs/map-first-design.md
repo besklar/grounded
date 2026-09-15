@@ -158,10 +158,10 @@ Limits and handling:
 A successful city or postal-code lookup produces:
 
 ```text
-SearchScope(label, center, radiusKilometers = 805)
+SearchScope(label, center)
 ```
 
-All active earthquakes within 805 km / 500 miles of the resolved center are included. This is deterministic across screen sizes and matches Grounded's existing definition of “nearby.” The UI says “within 500 mi” or “within 805 km” using the locale's measurement system.
+The selected search radius is stored with the other filters and defaults to 500 miles. Users can narrow it to 250, 100, or 50 miles; metric locales see converted kilometre labels. The same deterministic radius is applied to the summary, map, count, and list regardless of screen size, and map panning never silently changes it.
 
 Map panning does not silently change the result set. A future explicit “Search this area” action may create a viewport-based scope, but incidental camera movement must not make the count and list jump.
 
@@ -285,7 +285,7 @@ Cluster activation zooms toward its members. It never replaces the result count 
 ### JVM
 
 - Geocoder result normalization and typed failures.
-- 805 km search-scope boundary, including antimeridian behavior.
+- Default and narrowed search-radius boundaries, including antimeridian behavior.
 - Search scope composed with time, magnitude, and ordering.
 - Stable camera-command consumption.
 - Sheet stable-state restoration values.

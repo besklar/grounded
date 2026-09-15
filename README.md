@@ -13,7 +13,7 @@ Large text, dark theme, and landscape are supported through an adaptive two-pane
 ## Features
 
 - Recent worldwide earthquake activity from the official USGS seven-day GeoJSON feed
-- City or postal-code search with a deterministic 805 km / 500 mile result area
+- City or postal-code search with selectable 50, 100, 250, or 500 mile result areas
 - Shared time, magnitude, and ordering controls for the summary, map, and list
 - Map-first discovery with progressive marker clustering, map layers, Locate me, and an expandable results sheet backed by one shared dataset
 - Full event details, official USGS links, and Android sharing
@@ -75,7 +75,7 @@ The implemented map-first search and expandable-results behavior is documented i
 
 - Grounded caches the USGS seven-day feed once, then filters it locally. The documented default is past 24 hours, all magnitudes, newest first.
 - A nearby significant event is magnitude 4.5+ within 805 km / 500 miles.
-- A resolved city or postal code applies the same fixed 805 km / 500 mile radius to the summary, map, count, and list. Panning the map does not silently change that result set.
+- A resolved city or postal code applies the selected search radius—500 miles by default—to the summary, map, count, and list. Panning the map does not silently change that result set.
 - Unknown values remain unknown; Grounded never turns missing magnitude into `0.0`.
 - Invalid coordinates exclude an event from Map but never from List.
 - Saved data becomes visibly stale after 30 minutes from the last successful retrieval.
@@ -101,7 +101,7 @@ Denial leaves all non-relative features working. A permanently denied permission
 ./gradlew pixel2Api31DebugAndroidTest
 ```
 
-The current suite contains 52 JVM tests and 18 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, saved-state restoration, city/postal normalization and geographic scope, combined filter/sort rules, summaries, formatting, safe links and sharing, progressive map clustering, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, search/result consistency, expandable-sheet behavior, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
+The current suite contains 53 JVM tests and 18 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, saved-state restoration, city/postal normalization and configurable geographic scope, combined filter/sort rules, summaries, formatting, safe links and sharing, progressive map clustering, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, search/result consistency, expandable-sheet behavior, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
 
 Manual release checks should cover:
 
