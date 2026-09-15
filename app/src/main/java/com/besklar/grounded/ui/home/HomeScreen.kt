@@ -81,6 +81,7 @@ import androidx.compose.ui.unit.dp
 import com.besklar.grounded.R
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.location.SearchScope
+import com.besklar.grounded.model.Earthquake
 import com.google.maps.android.compose.MapType
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -92,7 +93,6 @@ fun HomeScreen(
     onModeSelected: (HomeMode) -> Unit,
     onRefresh: () -> Unit,
     onEventSelected: (String) -> Unit,
-    onMapEventSelected: (String) -> Unit,
     onOpenDetails: (String) -> Unit,
     onRequestLocation: () -> Unit,
     modifier: Modifier = Modifier,
@@ -104,8 +104,19 @@ fun HomeScreen(
     mapsConfigured: Boolean = com.besklar.grounded.BuildConfig.MAPS_CONFIGURED,
 ) {
     val userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates
-    val visibleEarthquakes =
+    val mapEarthquakes =
         EarthquakeFilter.apply(
+            earthquakes = state.snapshot?.earthquakes.orEmpty(),
+            filters = state.filters,
+            now = Instant.now(),
+            userCoordinates = userCoordinates,
+            searchScope = null,
+        )
+    var mapViewport by remember { mutableStateOf<MapViewport?>(null) }
+    val visibleEarthquakes =
+        mapViewport?.let { viewport ->
+            mapEarthquakes.filter { earthquake -> earthquake.coordinates?.let(viewport::contains) == true }
+        } ?: EarthquakeFilter.apply(
             earthquakes = state.snapshot?.earthquakes.orEmpty(),
             filters = state.filters,
             now = Instant.now(),
@@ -124,9 +135,34 @@ fun HomeScreen(
     val cameraFocusKey =
         when {
             cameraIntent == "locate" && userCoordinates != null -> "locate:$locateRequest:${userCoordinates.latitude}:${userCoordinates.longitude}"
-            state.searchScope != null -> "search:${state.searchScope.label}:${state.searchScope.center.latitude}:${state.searchScope.center.longitude}"
+            state.searchScope != null ->
+                "search:${state.searchScope.label}:${state.searchScope.center.latitude}:${state.searchScope.center.longitude}:${state.filters.distance.name}"
             else -> null
         }
+
+    fun locateMap() {
+        mapViewport = null
+        cameraIntent = "locate"
+        locateRequest++
+        onClearSearch()
+        onRequestLocation()
+    }
+
+    fun updateFilters(filters: HomeFilters) {
+        if (filters.distance != state.filters.distance && state.searchScope != null) {
+            mapViewport = null
+            cameraIntent = "search"
+        }
+        onFiltersChanged(filters)
+    }
+
+    fun resetFilters() {
+        if (state.searchScope != null) {
+            mapViewport = null
+            cameraIntent = "search"
+        }
+        onResetFilters()
+    }
 
     Scaffold(modifier = modifier, containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -134,15 +170,19 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
                 verticalAlignment = Alignment.Top,
             ) {
-                FilterControls(
-                    filters = state.filters,
-                    locationAvailable = userCoordinates != null,
-                    searchActive = state.searchScope != null,
-                    onFiltersChanged = onFiltersChanged,
-                    onReset = onResetFilters,
-                    compact = true,
-                    modifier = Modifier.padding(start = 12.dp, top = 12.dp),
-                )
+                Box(
+                    modifier = Modifier.padding(start = 12.dp).height(72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    FilterControls(
+                        filters = state.filters,
+                        locationAvailable = userCoordinates != null,
+                        searchActive = state.searchScope != null,
+                        onFiltersChanged = ::updateFilters,
+                        onReset = ::resetFilters,
+                        compact = true,
+                    )
+                }
                 PlaceSearchBar(
                     query = state.searchQuery,
                     status = state.searchStatus,
@@ -150,6 +190,7 @@ fun HomeScreen(
                     radiusKilometers = state.filters.distance.radiusKilometers,
                     onQueryChanged = onSearchQueryChanged,
                     onSearch = {
+                        mapViewport = null
                         cameraIntent = "search"
                         onSearch()
                     },
@@ -161,18 +202,15 @@ fun HomeScreen(
                 Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     MapSurface(
                         state = filteredState,
+                        mapEarthquakes = mapEarthquakes,
                         mapType = mapType,
                         cameraFocus = cameraFocus,
                         cameraFocusKey = cameraFocusKey,
                         onRefresh = onRefresh,
-                        onMapEventSelected = onMapEventSelected,
                         onOpenDetails = onOpenDetails,
                         onMapTypeChanged = { mapTypeName = it.name },
-                        onLocate = {
-                            cameraIntent = "locate"
-                            locateRequest++
-                            onRequestLocation()
-                        },
+                        onLocate = ::locateMap,
+                        onViewportChanged = { mapViewport = it },
                         mapsConfigured = mapsConfigured,
                         modifier = Modifier.weight(0.62f).fillMaxHeight(),
                     )
@@ -182,8 +220,8 @@ fun HomeScreen(
                             filters = state.filters,
                             locationAvailable = userCoordinates != null,
                             searchActive = state.searchScope != null,
-                            onFiltersChanged = onFiltersChanged,
-                            onReset = onResetFilters,
+                            onFiltersChanged = ::updateFilters,
+                            onReset = ::resetFilters,
                             showButton = false,
                         )
                         Spacer(Modifier.height(8.dp))
@@ -199,7 +237,9 @@ fun HomeScreen(
             } else {
                 PortraitMapAndResults(
                     state = filteredState,
+                    mapEarthquakes = mapEarthquakes,
                     resultCount = visibleEarthquakes.size,
+                    viewportActive = mapViewport != null,
                     filtersExcludedAll = filtersExcludedAll,
                     mapType = mapType,
                     cameraFocus = cameraFocus,
@@ -207,17 +247,12 @@ fun HomeScreen(
                     onModeSelected = onModeSelected,
                     onRefresh = onRefresh,
                     onEventSelected = onEventSelected,
-                    onMapEventSelected = onMapEventSelected,
                     onOpenDetails = onOpenDetails,
-                    onRequestLocation = onRequestLocation,
-                    onFiltersChanged = onFiltersChanged,
-                    onResetFilters = onResetFilters,
+                    onFiltersChanged = ::updateFilters,
+                    onResetFilters = ::resetFilters,
                     onMapTypeChanged = { mapTypeName = it.name },
-                    onLocate = {
-                        cameraIntent = "locate"
-                        locateRequest++
-                        onRequestLocation()
-                    },
+                    onLocate = ::locateMap,
+                    onViewportChanged = { mapViewport = it },
                     mapsConfigured = mapsConfigured,
                 )
             }
@@ -229,7 +264,9 @@ fun HomeScreen(
 @Composable
 private fun PortraitMapAndResults(
     state: HomeUiState,
+    mapEarthquakes: List<Earthquake>,
     resultCount: Int,
+    viewportActive: Boolean,
     filtersExcludedAll: Boolean,
     mapType: MapType,
     cameraFocus: com.besklar.grounded.model.Coordinates?,
@@ -237,13 +274,12 @@ private fun PortraitMapAndResults(
     onModeSelected: (HomeMode) -> Unit,
     onRefresh: () -> Unit,
     onEventSelected: (String) -> Unit,
-    onMapEventSelected: (String) -> Unit,
     onOpenDetails: (String) -> Unit,
-    onRequestLocation: () -> Unit,
     onFiltersChanged: (HomeFilters) -> Unit,
     onResetFilters: () -> Unit,
     onMapTypeChanged: (MapType) -> Unit,
     onLocate: () -> Unit,
+    onViewportChanged: (MapViewport) -> Unit,
     mapsConfigured: Boolean,
 ) {
     val sheetState =
@@ -305,11 +341,10 @@ private fun PortraitMapAndResults(
                     }
                     if (expanded) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            SituationSummaryCard(
+                            CompactResultsHeader(
                                 state = state,
-                                onRequestLocation = onRequestLocation,
-                                showTitle = false,
-                                showLocationAction = false,
+                                resultCount = resultCount,
+                                viewportActive = viewportActive,
                             )
                             FilterControls(
                                 filters = state.filters,
@@ -352,14 +387,15 @@ private fun PortraitMapAndResults(
     ) { _ ->
         MapSurface(
             state = state,
+            mapEarthquakes = mapEarthquakes,
             mapType = mapType,
             cameraFocus = cameraFocus,
             cameraFocusKey = cameraFocusKey,
             onRefresh = onRefresh,
-            onMapEventSelected = onMapEventSelected,
             onOpenDetails = onOpenDetails,
             onMapTypeChanged = onMapTypeChanged,
             onLocate = onLocate,
+            onViewportChanged = onViewportChanged,
             mapsConfigured = mapsConfigured,
             modifier = Modifier.fillMaxSize(),
             showStatusOverlay = !expanded,
@@ -440,14 +476,15 @@ private fun PlaceSearchBar(
 @Composable
 private fun MapSurface(
     state: HomeUiState,
+    mapEarthquakes: List<Earthquake>,
     mapType: MapType,
     cameraFocus: com.besklar.grounded.model.Coordinates?,
     cameraFocusKey: Any?,
     onRefresh: () -> Unit,
-    onMapEventSelected: (String) -> Unit,
     onOpenDetails: (String) -> Unit,
     onMapTypeChanged: (MapType) -> Unit,
     onLocate: () -> Unit,
+    onViewportChanged: (MapViewport) -> Unit,
     mapsConfigured: Boolean,
     modifier: Modifier = Modifier,
     showStatusOverlay: Boolean = true,
@@ -455,15 +492,16 @@ private fun MapSurface(
     var showLocationExplanation by rememberSaveable { mutableStateOf(false) }
     Box(modifier = modifier) {
         EarthquakeMap(
-            earthquakes = state.snapshot?.earthquakes.orEmpty(),
+            earthquakes = mapEarthquakes,
             userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
-            selectedEventId = state.selectedEventId,
-            onEventSelected = onMapEventSelected,
+            selectedEventId = state.selectedEventId?.takeIf { selected -> state.snapshot?.earthquakes?.any { it.id == selected } == true },
             onOpenDetails = onOpenDetails,
             mapsConfigured = mapsConfigured,
             mapType = mapType,
             cameraFocus = cameraFocus,
             cameraFocusKey = cameraFocusKey,
+            cameraFocusRadiusKilometers = state.filters.distance.radiusKilometers,
+            onViewportChanged = onViewportChanged,
             showRecenterButton = false,
         )
         if (showStatusOverlay && state.isInitialLoading) {
@@ -574,6 +612,57 @@ private fun HomeModeContent(
                     listState = listState,
                     contentPadding = listContentPadding,
                 )
+        }
+    }
+}
+
+@Composable
+private fun CompactResultsHeader(
+    state: HomeUiState,
+    resultCount: Int,
+    viewportActive: Boolean,
+) {
+    val locale = LocalConfiguration.current.locales[0]
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text =
+            pluralStringResource(
+                if (viewportActive) R.plurals.earthquakes_on_map else R.plurals.earthquakes_count,
+                resultCount,
+                resultCount,
+            ),
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { heading() },
+        )
+        when {
+            state.refreshStatus is RefreshStatus.Refreshing ->
+                Text(
+                    text = stringResource(R.string.refreshing),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            state.snapshot != null -> {
+                val freshness =
+                    EarthquakeFormatter.relativeTime(
+                        occurredAt = state.snapshot.lastSuccessfulRetrieval,
+                        now = Instant.now(),
+                        locale = locale,
+                        zoneId = java.time.ZoneId.systemDefault(),
+                    )
+                Text(
+                    text =
+                    if ((state.dataAge ?: java.time.Duration.ZERO) > java.time.Duration.ofMinutes(30)) {
+                        stringResource(R.string.stale_updated, freshness)
+                    } else {
+                        stringResource(R.string.last_updated, freshness)
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -968,7 +1057,7 @@ private fun FailureState(onRetry: () -> Unit) {
 private fun EmptyState(filtersExcludedAll: Boolean) {
     Text(
         stringResource(
-            if (filtersExcludedAll) R.string.filters_excluded_all else R.string.empty_list_explanation,
+            if (filtersExcludedAll) R.string.filters_excluded_all else R.string.no_results_explanation,
         ),
         style = MaterialTheme.typography.bodyLarge,
     )

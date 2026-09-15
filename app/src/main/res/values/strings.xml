@@ -17,13 +17,11 @@
         <item quantity="other">%1$d saved events remain available</item>
     </plurals>
     <string name="no_results_explanation">No earthquakes were reported in the selected time window.</string>
-    <string name="empty_list_explanation">There is nothing to show right now. Pull to refresh or try again later.</string>
     <string name="loading_earthquakes">Loading recent earthquakes</string>
     <string name="could_not_load">Earthquake data is unavailable</string>
     <string name="retry">Retry</string>
     <string name="map_configuration_needed">Map setup needed</string>
     <string name="map_configuration_explanation">Add MAPS_API_KEY to local.properties, then rebuild. The earthquake list remains available without it.</string>
-    <string name="view_details">View details</string>
     <string name="earthquake_details">Earthquake details</string>
     <string name="reported_earthquake">Reported earthquake</string>
     <string name="event_location">Event location</string>
@@ -90,6 +88,14 @@
     <plurals name="results_count">
         <item quantity="one">%1$d result</item>
         <item quantity="other">%1$d results</item>
+    </plurals>
+    <plurals name="earthquakes_count">
+        <item quantity="one">%1$d earthquake</item>
+        <item quantity="other">%1$d earthquakes</item>
+    </plurals>
+    <plurals name="earthquakes_on_map">
+        <item quantity="one">%1$d earthquake on this map</item>
+        <item quantity="other">%1$d earthquakes on this map</item>
     </plurals>
     <string name="expand_results_description">%1$s. Expand results.</string>
     <string name="show_map_description">Collapse results and return to map</string>

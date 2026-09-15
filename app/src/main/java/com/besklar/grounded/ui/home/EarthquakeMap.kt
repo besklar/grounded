@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +24,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -52,6 +52,9 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlin.math.cos
 
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
@@ -59,13 +62,14 @@ fun EarthquakeMap(
     earthquakes: List<Earthquake>,
     userCoordinates: Coordinates?,
     selectedEventId: String?,
-    onEventSelected: (String) -> Unit,
     onOpenDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
     mapsConfigured: Boolean = BuildConfig.MAPS_CONFIGURED,
     mapType: MapType = MapType.NORMAL,
     cameraFocus: Coordinates? = null,
     cameraFocusKey: Any? = null,
+    cameraFocusRadiusKilometers: Double = 805.0,
+    onViewportChanged: (MapViewport) -> Unit = {},
     showRecenterButton: Boolean = true,
 ) {
     if (!mapsConfigured) {
@@ -92,9 +96,10 @@ fun EarthquakeMap(
         }
     var mapLoaded by remember { mutableStateOf(false) }
     var initialCameraSet by remember { mutableStateOf(false) }
+    val currentViewportCallback by rememberUpdatedState(onViewportChanged)
 
-    LaunchedEffect(mapLoaded, mappable, initialCameraSet) {
-        if (mapLoaded && !initialCameraSet && mappable.isNotEmpty()) {
+    LaunchedEffect(mapLoaded, mappable, initialCameraSet, cameraFocus) {
+        if (mapLoaded && !initialCameraSet && cameraFocus == null && mappable.isNotEmpty()) {
             val update = initialCameraUpdate(mappable, userCoordinates)
             cameraState.move(update)
             initialCameraSet = true
@@ -103,9 +108,21 @@ fun EarthquakeMap(
 
     LaunchedEffect(mapLoaded, cameraFocusKey) {
         if (mapLoaded && cameraFocus != null && cameraFocusKey != null) {
-            cameraState.move(CameraUpdateFactory.newLatLngZoom(LatLng(cameraFocus.latitude, cameraFocus.longitude), 7f))
+            cameraState.move(focusCameraUpdate(cameraFocus, cameraFocusRadiusKilometers))
             initialCameraSet = true
         }
+    }
+
+    LaunchedEffect(mapLoaded, cameraState) {
+        if (!mapLoaded) return@LaunchedEffect
+        snapshotFlow { cameraState.isMoving to initialCameraSet }
+            .distinctUntilChanged()
+            .filter { (isMoving, cameraWasSet) -> !isMoving && cameraWasSet }
+            .collect {
+                cameraState.projection?.visibleRegion?.latLngBounds?.let { bounds ->
+                    currentViewportCallback(MapViewport.from(bounds))
+                }
+            }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -123,7 +140,7 @@ fun EarthquakeMap(
                     true
                 },
                 onClusterItemClick = { item ->
-                    onEventSelected(item.id)
+                    onOpenDetails(item.id)
                     true
                 },
                 clusterContent = { cluster -> ClusterMarker(cluster.size) },
@@ -154,13 +171,6 @@ fun EarthquakeMap(
             ) {
                 Icon(Icons.Rounded.MyLocation, contentDescription = stringResource(R.string.recenter_map))
             }
-        }
-        earthquakes.firstOrNull { it.id == selectedEventId }?.let { selected ->
-            CompactMapSelection(
-                earthquake = selected,
-                onOpenDetails = { onOpenDetails(selected.id) },
-                modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
-            )
         }
     }
 }
@@ -223,27 +233,6 @@ private fun MapConfigurationMissing(modifier: Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun CompactMapSelection(
-    earthquake: Earthquake,
-    onOpenDetails: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val locale = LocalConfiguration.current.locales[0]
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                "M ${EarthquakeFormatter.magnitude(earthquake, locale)}",
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(EarthquakeFormatter.place(earthquake, locale), style = MaterialTheme.typography.titleMedium)
-            androidx.compose.material3.TextButton(onClick = onOpenDetails) {
-                Text(stringResource(R.string.view_details))
-            }
-        }
     }
 }
 
@@ -311,3 +300,20 @@ private fun initialCameraUpdate(events: List<MapEarthquake>, userCoordinates: Co
             }.build()
     CameraUpdateFactory.newLatLngBounds(bounds, 96)
 }
+
+private fun focusCameraUpdate(center: Coordinates, radiusKilometers: Double): com.google.android.gms.maps.CameraUpdate {
+    val safeRadius = radiusKilometers.coerceIn(1.0, 20_000.0)
+    val latitudeDelta = safeRadius / 111.32
+    val longitudeScale = cos(Math.toRadians(center.latitude)).coerceAtLeast(0.01)
+    val longitudeDelta = (safeRadius / (111.32 * longitudeScale)).coerceAtMost(180.0)
+    val south = (center.latitude - latitudeDelta).coerceAtLeast(-85.0)
+    val north = (center.latitude + latitudeDelta).coerceAtMost(85.0)
+    val west = wrapLongitude(center.longitude - longitudeDelta)
+    val east = wrapLongitude(center.longitude + longitudeDelta)
+    return CameraUpdateFactory.newLatLngBounds(
+        LatLngBounds(LatLng(south, west), LatLng(north, east)),
+        96,
+    )
+}
+
+private fun wrapLongitude(longitude: Double): Double = ((longitude + 180.0) % 360.0 + 360.0) % 360.0 - 180.0

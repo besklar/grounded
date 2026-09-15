@@ -79,7 +79,6 @@ fun GroundedApp() {
                 onModeSelected = viewModel::selectMode,
                 onRefresh = viewModel::refresh,
                 onEventSelected = openDetails,
-                onMapEventSelected = viewModel::selectEvent,
                 onOpenDetails = openDetails,
                 onRequestLocation = {
                     if ((state.locationContext as? com.besklar.grounded.location.LocationContext.Denied)?.permanently == true) {

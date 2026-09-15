@@ -161,9 +161,9 @@ A successful city or postal-code lookup produces:
 SearchScope(label, center)
 ```
 
-The selected search radius is stored with the other filters and defaults to 500 miles. Users can narrow it to 250, 100, or 50 miles; metric locales see converted kilometre labels. The same deterministic radius is applied to the summary, map, count, and list regardless of screen size, and map panning never silently changes it.
+The selected search radius is stored with the other filters and defaults to 500 miles. Users can narrow it to 250, 100, or 50 miles; metric locales see converted kilometre labels. A successful search uses that radius to frame the initial camera. Once the user pans, zooms, or opens a cluster, the settled visible map bounds temporarily scope the count and expanded list. Zooming out can reintroduce eligible events outside the original search circle.
 
-Map panning does not silently change the result set. A future explicit “Search this area” action may create a viewport-based scope, but incidental camera movement must not make the count and list jump.
+Locate me clears a potentially misleading city/postal scope, centers the approximate user location, and restores the selected-radius camera framing. The location remains memory-only; only the resulting camera bounds influence visible results.
 
 ### Persistent sheet
 
@@ -202,6 +202,7 @@ Compose owns visual mechanics:
 - current drag offset;
 - `BottomSheetScaffoldState`;
 - map camera object;
+- temporary settled map viewport;
 - transient modal visibility;
 - focus and keyboard state;
 - list scroll object.
@@ -209,9 +210,11 @@ Compose owns visual mechanics:
 Only stable, small restoration values cross `SavedStateHandle`: submitted query, resolved scope, filter/order enum values, selected event ID, stable sheet state, and a compact camera snapshot. Room continues to own earthquake data. The current pure selector becomes:
 
 ```text
-Room events + time + magnitude + search scope + ordering + optional user location
-    → one visible earthquake list
-    → count + summary + clusters + expanded list
+Room events + time + magnitude + ordering + optional user location
+    → eligible earthquakes and map clusters
+    → search-radius camera framing
+    → settled viewport selection
+    → count + expanded list
 ```
 
 This is the same idea as one memoized Redux selector feeding every consumer. No consumer gets to invent its own count.
@@ -237,7 +240,7 @@ The layers control offers Normal, Terrain, and Satellite. Map type is presentati
 
 Clustering is required for the map-first design because the seven-day/all-magnitude view can contain thousands of valid coordinates. Use Google's Maps Android Utility Library through its Compose `Clustering` integration. Cluster models remain UI-only and are derived from the same visible earthquake list.
 
-Cluster activation zooms toward its members. It never replaces the result count with the number of clusters. Implementation and performance verification are tracked independently so clustering receives its own testable commit.
+Cluster activation zooms toward its members. Once the camera settles, the count and expanded list update to the events visible in that geographic area—not the number of rendered clusters.
 
 ## Component inventory
 
@@ -245,7 +248,7 @@ Cluster activation zooms toward its members. It never replaces the result count 
 | --- | --- | --- |
 | `MapFirstHomeScreen` | Coordinates responsive layout and shared visible list | ViewModel + Compose |
 | `PlaceSearchBar` | Query editing, submit, clear, progress/error affordance | ViewModel for query/status; Compose for focus |
-| `EarthquakeMap` | Camera, map type, clusters, selection | Compose camera; ViewModel intent/selection |
+| `EarthquakeMap` | Camera, map type, clusters, direct detail navigation | Compose camera; ViewModel navigation callback |
 | `MapOverlayControls` | Layers, filters, Locate me | Callbacks only |
 | `EarthquakeResultsSheet` | Peek/expanded presentation and result count | Compose mechanics; saveable stable state |
 | `EarthquakeList` | Stable-ID scrolling results | Shared visible list + Compose scroll state |
@@ -299,7 +302,8 @@ Cluster activation zooms toward its members. It never replaces the result count 
 - Locate me explanation precedes permission callback.
 - Layer and filter controls have correct roles and labels.
 - Full list preserves scroll position across collapse/expand.
-- Count remains earthquake count while clusters render fewer map items.
+- Count and expanded list follow settled camera bounds while clusters render fewer visual items.
+- Individual markers navigate directly to the shared detail destination without placing an obstructed action behind the results sheet.
 - Missing Maps configuration still reaches the list.
 
 ### Manual

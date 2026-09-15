@@ -35,7 +35,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                     mapsConfigured = false,
@@ -56,7 +55,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = { selected = it },
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                 )
@@ -77,7 +75,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = { retried = true },
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                 )
@@ -104,7 +101,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                 )
@@ -124,7 +120,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                 )
@@ -149,7 +144,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                     mapsConfigured = false,
@@ -160,7 +154,8 @@ class HomeScreenTest {
         composeRule.onNodeWithText("1 result").assertDoesNotExist()
         composeRule.onNodeWithText("Recent earthquake activity").assertDoesNotExist()
         composeRule.onNodeWithText("See earthquakes relative to you").assertDoesNotExist()
-        composeRule.onNodeWithText("1 event worldwide", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("1 earthquake").assertIsDisplayed()
+        composeRule.onNodeWithText("1 event worldwide", substring = true).assertDoesNotExist()
         composeRule.onNodeWithText("Updated", substring = true).assertIsDisplayed()
     }
 
@@ -172,7 +167,6 @@ class HomeScreenTest {
                     earthquakes = snapshot().earthquakes,
                     userCoordinates = null,
                     selectedEventId = null,
-                    onEventSelected = {},
                     onOpenDetails = {},
                     mapsConfigured = false,
                 )
@@ -200,7 +194,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                     onFiltersChanged = { filters = it },
@@ -236,7 +229,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                 )
@@ -257,7 +249,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                     onSearchQueryChanged = { query = it },
@@ -285,7 +276,6 @@ class HomeScreenTest {
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = { requested = true },
                 )
@@ -302,6 +292,42 @@ class HomeScreenTest {
     }
 
     @Test
+    fun locateMeClearsThePlaceScopeBeforeRequestingAFreshLocation() {
+        var cleared = false
+        var requested = false
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state =
+                    HomeUiState(
+                        snapshot = snapshot(),
+                        mode = HomeMode.MAP,
+                        initialAttemptFinished = true,
+                        searchQuery = "Denver",
+                        searchScope = SearchScope("Denver, Colorado", Coordinates(39.7, -104.9)),
+                        searchStatus = SearchStatus.Resolved,
+                        locationContext = LocationContext.Available(Coordinates(39.7, -104.9), Instant.now()),
+                    ),
+                    onModeSelected = {},
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = { requested = true },
+                    onClearSearch = { cleared = true },
+                    mapsConfigured = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Locate me").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(true, cleared)
+            assertEquals(true, requested)
+        }
+    }
+
+    @Test
     fun resultPeekExpandsAndMapButtonCollapsesIt() {
         var mode by mutableStateOf(HomeMode.MAP)
         composeRule.setContent {
@@ -311,7 +337,6 @@ class HomeScreenTest {
                     onModeSelected = { mode = it },
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                 )
@@ -339,7 +364,6 @@ class HomeScreenTest {
                     onModeSelected = { mode = it },
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                 )
@@ -375,7 +399,6 @@ class HomeScreenTest {
                     onModeSelected = { mode = it },
                     onRefresh = {},
                     onEventSelected = {},
-                    onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
                     mapsConfigured = false,
