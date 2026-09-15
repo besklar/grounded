@@ -10,7 +10,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -22,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.besklar.grounded.ui.detail.DetailScreen
 import com.besklar.grounded.ui.detail.DetailViewModel
+import com.besklar.grounded.ui.home.HomeEffect
 import com.besklar.grounded.ui.home.HomeScreen
 import com.besklar.grounded.ui.home.HomeViewModel
 
@@ -32,6 +35,14 @@ fun GroundedApp() {
         composable("home") {
             val viewModel: HomeViewModel = hiltViewModel()
             val state = viewModel.uiState.collectAsStateWithLifecycle().value
+            val haptics = LocalHapticFeedback.current
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    if (effect is HomeEffect.NewEarthquakes) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                }
+            }
             val context = LocalContext.current
             val permissionLauncher =
                 rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->

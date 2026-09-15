@@ -42,6 +42,7 @@ fun EarthquakeList(
     earthquakes: List<Earthquake>,
     refreshing: Boolean,
     refreshFailed: Boolean,
+    lastUpdatedAt: Instant?,
     newEventIds: Set<String>,
     onRefresh: () -> Unit,
     onEventSelected: (String) -> Unit,
@@ -57,9 +58,14 @@ fun EarthquakeList(
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             if (refreshFailed) {
                 item(key = "offline") {
+                    val locale = LocalConfiguration.current.locales[0]
+                    val age =
+                        lastUpdatedAt?.let {
+                            EarthquakeFormatter.relativeTime(it, Instant.now(), locale, ZoneId.systemDefault())
+                        } ?: stringResource(R.string.unknown_time)
                     Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = stringResource(R.string.offline_saved_results),
+                            text = stringResource(R.string.offline_saved_results, age),
                             modifier = Modifier.padding(12.dp),
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )

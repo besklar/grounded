@@ -50,8 +50,16 @@
     <string name="not_now">Not now</string>
     <string name="distance_from_you">From you</string>
     <string name="recenter_map">Center map on my approximate location</string>
-    <string name="offline_saved_results">Offline — showing saved results</string>
+    <string name="offline_saved_results">Offline — showing saved results from %1$s</string>
     <string name="new_event">New</string>
     <string name="tsunami_flag">Tsunami flag</string>
     <string name="earthquake_row_description">Magnitude %1$s, %2$s, %3$s. View details.</string>
+    <string name="last_updated">Updated %1$s</string>
+    <string name="stale_updated">Saved data — updated %1$s</string>
+    <string name="up_to_date">Up to date</string>
+    <string name="unknown_time">an unknown time</string>
+    <plurals name="new_earthquakes">
+        <item quantity="one">%1$d new earthquake</item>
+        <item quantity="other">%1$d new earthquakes</item>
+    </plurals>
 </resources>

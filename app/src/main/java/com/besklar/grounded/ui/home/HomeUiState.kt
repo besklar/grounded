@@ -2,6 +2,7 @@ package com.besklar.grounded.ui.home
 
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.model.EarthquakeSnapshot
+import java.time.Duration
 
 enum class HomeMode {
     MAP,
@@ -26,10 +27,15 @@ data class HomeUiState(
     val selectedEventId: String? = null,
     val newEventIds: Set<String> = emptySet(),
     val locationContext: LocationContext = LocationContext.NotRequested,
+    val dataAge: Duration? = null,
 ) {
     val isInitialLoading: Boolean
         get() = snapshot == null && !initialAttemptFinished
 
     val isFullScreenFailure: Boolean
         get() = snapshot == null && initialAttemptFinished && refreshStatus is RefreshStatus.Failed
+}
+
+sealed interface HomeEffect {
+    data object NewEarthquakes : HomeEffect
 }

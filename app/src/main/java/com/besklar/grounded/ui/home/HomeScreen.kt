@@ -90,6 +90,7 @@ fun HomeScreen(
                                 earthquakes = state.snapshot?.earthquakes.orEmpty(),
                                 refreshing = state.refreshStatus is RefreshStatus.Refreshing,
                                 refreshFailed = state.refreshStatus is RefreshStatus.Failed,
+                                lastUpdatedAt = state.snapshot?.lastSuccessfulRetrieval,
                                 newEventIds = state.newEventIds,
                                 onRefresh = onRefresh,
                                 onEventSelected = onEventSelected,
@@ -142,6 +143,38 @@ private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Un
         )
         if (state.refreshStatus is RefreshStatus.Refreshing && state.snapshot != null) {
             Text(stringResource(R.string.refreshing), style = MaterialTheme.typography.labelMedium)
+        }
+        state.snapshot?.let { snapshot ->
+            val freshness =
+                EarthquakeFormatter.relativeTime(
+                    occurredAt = snapshot.lastSuccessfulRetrieval,
+                    now = java.time.Instant.now(),
+                    locale = locale,
+                    zoneId = java.time.ZoneId.systemDefault(),
+                )
+            Text(
+                text =
+                if ((state.dataAge ?: java.time.Duration.ZERO) > java.time.Duration.ofMinutes(30)) {
+                    stringResource(R.string.stale_updated, freshness)
+                } else {
+                    stringResource(R.string.last_updated, freshness)
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        when (val status = state.refreshStatus) {
+            is RefreshStatus.Success ->
+                Text(
+                    text =
+                    if (status.newCount == 0) {
+                        stringResource(R.string.up_to_date)
+                    } else {
+                        pluralStringResource(R.plurals.new_earthquakes, status.newCount, status.newCount)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            else -> Unit
         }
         if (state.locationContext is LocationContext.NotRequested || state.locationContext is LocationContext.Denied) {
             TextButton(onClick = { showLocationExplanation = true }) {
