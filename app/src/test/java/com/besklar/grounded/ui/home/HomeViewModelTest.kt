@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -59,6 +60,53 @@ class HomeViewModelTest {
         viewModel.viewModelScope.cancel()
     }
 
+    @Test
+    fun `failed refresh keeps cached content visible`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val cached = snapshot()
+        val repository = FakeRepository(result = RefreshResult.TransportFailure, initialSnapshot = cached)
+        val viewModel = viewModel(repository)
+
+        runCurrent()
+
+        assertEquals(cached, viewModel.uiState.value.snapshot)
+        assertEquals(RefreshStatus.Failed, viewModel.uiState.value.refreshStatus)
+        assertEquals(false, viewModel.uiState.value.isFullScreenFailure)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `new event badges expire after thirty seconds`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val repository =
+            FakeRepository(
+                result = RefreshResult.Success(setOf("new-event"), 0, 0),
+                initialSnapshot = snapshot(),
+            )
+        val viewModel = viewModel(repository)
+        try {
+            runCurrent()
+
+            assertEquals(setOf("new-event"), viewModel.uiState.value.newEventIds)
+            advanceTimeBy(30_001)
+            assertTrue(viewModel.uiState.value.newEventIds.isEmpty())
+        } finally {
+            viewModel.viewModelScope.cancel()
+        }
+    }
+
+    @Test
+    fun `data older than thirty minutes is exposed as stale`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val repository =
+            FakeRepository(
+                result = RefreshResult.TransportFailure,
+                initialSnapshot = snapshot(now.minusSeconds(31 * 60)),
+            )
+        val viewModel = viewModel(repository)
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.dataAge!! > java.time.Duration.ofMinutes(30))
+        viewModel.viewModelScope.cancel()
+    }
+
     private fun viewModel(repository: EarthquakeRepository) = HomeViewModel(
         repository = repository,
         locationRepository = FakeLocationRepository(),
@@ -66,11 +114,14 @@ class HomeViewModelTest {
         clock = Clock.fixed(now, ZoneOffset.UTC),
     )
 
+    private fun snapshot(retrievedAt: Instant = now) = EarthquakeSnapshot(emptyList(), "past_24_hours", retrievedAt, retrievedAt, null, "USGS")
+
     private class FakeRepository(
         private val result: RefreshResult? = null,
         private val gate: CompletableDeferred<RefreshResult>? = null,
+        initialSnapshot: EarthquakeSnapshot? = null,
     ) : EarthquakeRepository {
-        private val snapshots = MutableStateFlow<EarthquakeSnapshot?>(null)
+        private val snapshots = MutableStateFlow(initialSnapshot)
         var refreshCalls = 0
             private set
 

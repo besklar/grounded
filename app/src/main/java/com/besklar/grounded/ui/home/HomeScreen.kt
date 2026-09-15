@@ -319,5 +319,5 @@ private fun FailureState(onRetry: () -> Unit) {
 
 @Composable
 private fun EmptyState() {
-    Text(stringResource(R.string.no_results_explanation), style = MaterialTheme.typography.bodyLarge)
+    Text(stringResource(R.string.empty_list_explanation), style = MaterialTheme.typography.bodyLarge)
 }

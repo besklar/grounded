@@ -65,6 +65,8 @@ USGS → Retrofit → Repository → Room → Flow → ViewModel → Compose
 
 The code intentionally remains one Gradle module. Package boundaries provide separation without paying the build and maintenance cost of premature modularization. Hilt is used only at system boundaries; small product rules remain ordinary testable Kotlin.
 
+A more detailed explanation is available in [docs/architecture.md](docs/architecture.md).
+
 ## Product decisions
 
 - The default dataset is the USGS past 24 hours, ordered newest first.
@@ -94,7 +96,7 @@ Denial leaves all non-relative features working. A permanently denied permission
 ./gradlew pixel2Api31DebugAndroidTest
 ```
 
-JVM tests cover USGS normalization, malformed/duplicate input, cache retention, empty success, new/revised event detection, summaries, fallback formatting, safe links/share text, map transformation, and distance/direction calculations. Compose instrumentation tests cover stable loading and the principal list-selection flow. CI runs the same static, unit, build, and API 31 managed-device checks.
+The current suite contains 31 JVM tests and 11 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, summaries, formatting, safe links and sharing, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
 
 Manual release checks should cover:
 

@@ -54,8 +54,9 @@ fun EarthquakeMap(
     onEventSelected: (String) -> Unit,
     onOpenDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
+    mapsConfigured: Boolean = BuildConfig.MAPS_CONFIGURED,
 ) {
-    if (!BuildConfig.MAPS_CONFIGURED) {
+    if (!mapsConfigured) {
         MapConfigurationMissing(modifier)
         return
     }

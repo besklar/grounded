@@ -18,6 +18,7 @@
         <item quantity="other">%1$d saved events remain available</item>
     </plurals>
     <string name="no_results_explanation">No earthquakes were reported in the selected time window.</string>
+    <string name="empty_list_explanation">There is nothing to show right now. Pull to refresh or try again later.</string>
     <string name="loading_earthquakes">Loading recent earthquakes</string>
     <string name="could_not_load">Earthquake data is unavailable</string>
     <string name="retry">Retry</string>

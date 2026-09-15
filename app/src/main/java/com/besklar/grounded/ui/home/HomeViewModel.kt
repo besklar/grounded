@@ -7,6 +7,7 @@ import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.RefreshResult
 import com.besklar.grounded.location.LocationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,6 +44,7 @@ constructor(
     private var refreshJob: Job? = null
     private var clearNewEventsJob: Job? = null
     private var clearRefreshStatusJob: Job? = null
+    private val initialSnapshotObserved = CompletableDeferred<Unit>()
 
     init {
         viewModelScope.launch {
@@ -52,6 +54,7 @@ constructor(
                         snapshot = snapshot,
                         dataAge = snapshot?.let { Duration.between(it.lastSuccessfulRetrieval, clock.instant()).coerceAtLeast(Duration.ZERO) },
                     )
+                initialSnapshotObserved.complete(Unit)
             }
         }
         viewModelScope.launch {
@@ -94,6 +97,7 @@ constructor(
         if (refreshJob?.isActive == true) return
         refreshJob =
             viewModelScope.launch {
+                initialSnapshotObserved.await()
                 val hadSnapshotBeforeRefresh = mutableUiState.value.snapshot != null
                 mutableUiState.value = mutableUiState.value.copy(refreshStatus = RefreshStatus.Refreshing)
                 var newEventIds = emptySet<String>()
