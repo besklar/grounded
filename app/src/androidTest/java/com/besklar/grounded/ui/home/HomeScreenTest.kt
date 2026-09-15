@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -264,6 +265,29 @@ class HomeScreenTest {
             assertEquals("Denver", query)
             assertEquals(true, submitted)
         }
+    }
+
+    @Test
+    fun filterControlIsVerticallyCenteredWithTheSearchField() {
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state = HomeUiState(snapshot = snapshot(), initialAttemptFinished = true),
+                    onModeSelected = {},
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = {},
+                    mapsConfigured = false,
+                )
+            }
+        }
+
+        val filterCenter =
+            composeRule.onNodeWithContentDescription("Filters").fetchSemanticsNode().boundsInRoot.center.y
+        val searchCenter = composeRule.onNode(hasSetTextAction()).fetchSemanticsNode().boundsInRoot.center.y
+
+        assertEquals(searchCenter, filterCenter, 1f)
     }
 
     @Test

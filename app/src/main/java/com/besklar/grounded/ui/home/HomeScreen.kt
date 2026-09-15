@@ -171,7 +171,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.Top,
             ) {
                 Box(
-                    modifier = Modifier.padding(start = 12.dp).height(72.dp),
+                    modifier = Modifier.padding(start = 12.dp).height(80.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     FilterControls(
