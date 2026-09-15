@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">Grounded</string>
+    <string name="refresh">Refresh earthquake data</string>
+    <string name="refreshing">Checking for updates…</string>
+    <string name="map">Map</string>
+    <string name="list">List</string>
+    <string name="recent_activity">Recent earthquake activity</string>
+    <string name="showing_saved_activity">Showing saved earthquake activity</string>
+    <string name="no_recent_activity">No recent earthquake activity</string>
+    <plurals name="events_past_day">
+        <item quantity="one">%1$d event worldwide in the past 24 hours</item>
+        <item quantity="other">%1$d events worldwide in the past 24 hours</item>
+    </plurals>
+    <plurals name="saved_events_count">
+        <item quantity="one">%1$d saved event remains available</item>
+        <item quantity="other">%1$d saved events remain available</item>
+    </plurals>
+    <string name="no_results_explanation">No earthquakes were reported in the selected time window.</string>
+    <string name="loading_earthquakes">Loading recent earthquakes</string>
+    <string name="could_not_load">Earthquake data is unavailable</string>
+    <string name="retry">Retry</string>
+    <string name="map_coming_next">Map view</string>
+    <string name="list_coming_next">List view</string>
 </resources>
