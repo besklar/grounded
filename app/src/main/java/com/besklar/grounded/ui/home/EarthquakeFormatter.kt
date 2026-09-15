@@ -28,11 +28,19 @@ object EarthquakeFormatter {
     }
 
     fun relativeLocation(relative: RelativeLocation, locale: Locale): String {
-        val useMiles = locale.country.uppercase(Locale.ROOT) in setOf("US", "LR", "MM")
+        val useMiles = usesMiles(locale)
         val value = if (useMiles) relative.distanceKilometers * 0.621371 else relative.distanceKilometers
         val unit = if (useMiles) "mi" else "km"
         val number = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
         return "${number.format(value)} $unit ${relative.direction.label}"
+    }
+
+    fun distance(distanceKilometers: Double, locale: Locale): String {
+        val useMiles = usesMiles(locale)
+        val value = if (useMiles) distanceKilometers * 0.621371 else distanceKilometers
+        val unit = if (useMiles) "mi" else "km"
+        val number = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
+        return "${number.format(value)} $unit"
     }
 
     fun relativeTime(
@@ -53,4 +61,6 @@ object EarthquakeFormatter {
                     .format(Date.from(occurredAt))
         }
     }
+
+    private fun usesMiles(locale: Locale): Boolean = locale.country.uppercase(Locale.ROOT) in setOf("US", "LR", "MM")
 }

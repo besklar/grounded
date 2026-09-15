@@ -20,18 +20,18 @@ This is MVVM because each screen has a ViewModel that owns screen state and coor
 - `data/local` owns Room entities, snapshot metadata, DAOs, and atomic replacement.
 - `data/repository` coordinates remote refresh and local persistence. It reports typed outcomes while Room remains the observable data source.
 - `model` contains stable application models that do not depend on Retrofit, Room, or Compose.
-- `location` owns opt-in, memory-only approximate location and local distance calculations.
+- `location` owns opt-in, memory-only approximate location, the system-geocoder boundary for place search, and local distance calculations.
 - `ui` owns ViewModels, immutable screen state, formatting, navigation, and composables.
 
 Hilt wires long-lived system boundaries such as the database, HTTP client, repository, and location provider. It is not used to disguise simple calculations behind interfaces. Pure logic stays as ordinary Kotlin because direct code is easier to test and explain.
 
 ## State ownership
 
-The ViewModel owns data that affects the screen as a product: cached content, refresh status, selected mode/event, freshness, location context, and temporary new-event IDs. Compose owns short-lived visual state such as whether a sheet is open. Saveable state is used only where recreating an Activity should preserve the user’s place.
+The ViewModel owns data that affects the screen as a product: cached content, refresh status, submitted geographic scope, selected mode/event, filters, freshness, location context, and temporary new-event IDs. Compose owns short-lived visual state such as an open explanation dialog or map-layer menu. Small durable choices are mirrored through saved state so Activity recreation preserves the user’s place without treating saved state as a database.
 
 Refreshes are serialized to one job. Cached content remains visible during refresh, failures do not destroy it, and the ViewModel waits for Room’s first snapshot emission before deciding whether refreshed IDs are genuinely new. That last detail prevents startup scheduling from changing product behavior.
 
-The repository caches one seven-day feed rather than separate results per filter. A pure selector applies the chosen time range, magnitude threshold, and ordering in memory; that exact list is passed to the summary, map, list, and empty-state decision. This is analogous to a memoized Redux selector: the durable store remains unchanged while the UI derives a focused view. Nearest ordering uses local distance calculation and falls back explicitly to recent ordering when location is unavailable.
+The repository caches one seven-day feed rather than separate results per filter or place search. A pure selector applies the submitted geographic scope, chosen time range, magnitude threshold, and ordering in memory; that exact list is passed to the summary, map, count, list, and empty-state decision. This is analogous to a memoized Redux selector: the durable store remains unchanged while the UI derives a focused view. Nearest ordering uses local distance calculation and falls back explicitly to recent ordering when location is unavailable.
 
 Map clustering is a UI projection of that same selected list. The official Maps Compose utility groups nearby map items according to camera zoom, but it never changes the ViewModel's result count or the list. Tapping a cluster moves the camera toward its members; tapping an individual item selects the underlying stable earthquake ID.
 

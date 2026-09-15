@@ -216,6 +216,43 @@ class HomeViewModelTest {
         viewModel.viewModelScope.cancel()
     }
 
+    @Test
+    fun `invalid saved mode falls back to map`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val viewModel =
+            HomeViewModel(
+                FakeRepository(RefreshResult.Success(emptySet(), 0, 0)),
+                FakeLocationRepository(),
+                FakeLocationSearchRepository(),
+                SavedStateHandle(mapOf("home_mode" to "REMOVED_MODE")),
+                Clock.fixed(now, ZoneOffset.UTC),
+            )
+        runCurrent()
+
+        assertEquals(HomeMode.MAP, viewModel.uiState.value.mode)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `editing after replacement error restores resolved search status`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val scope = SearchScope("Denver, Colorado", Coordinates(39.7, -104.9))
+        val searchRepository = FakeLocationSearchRepository(LocationSearchResult.Success(scope))
+        val viewModel = viewModel(FakeRepository(RefreshResult.Success(emptySet(), 0, 0)), searchRepository)
+        runCurrent()
+        viewModel.updateSearchQuery("Denver")
+        viewModel.submitSearch()
+        runCurrent()
+        searchRepository.result = LocationSearchResult.NotFound
+        viewModel.updateSearchQuery("Missing place")
+        viewModel.submitSearch()
+        runCurrent()
+
+        viewModel.updateSearchQuery("Try another place")
+
+        assertEquals(scope, viewModel.uiState.value.searchScope)
+        assertEquals(SearchStatus.Resolved, viewModel.uiState.value.searchStatus)
+        viewModel.viewModelScope.cancel()
+    }
+
     private fun viewModel(
         repository: EarthquakeRepository,
         searchRepository: LocationSearchRepository = FakeLocationSearchRepository(),

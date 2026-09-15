@@ -40,7 +40,7 @@ constructor(
     private val mutableUiState =
         MutableStateFlow(
             HomeUiState(
-                mode = savedStateHandle.get<String>(MODE_KEY)?.let(HomeMode::valueOf) ?: HomeMode.MAP,
+                mode = savedEnum(MODE_KEY, HomeMode.MAP),
                 filters =
                 HomeFilters(
                     timeRange = savedEnum(TIME_RANGE_KEY, TimeRange.PAST_DAY),
@@ -120,7 +120,12 @@ constructor(
         mutableUiState.value =
             mutableUiState.value.copy(
                 searchQuery = query,
-                searchStatus = if (mutableUiState.value.searchStatus is SearchStatus.Error) SearchStatus.Idle else mutableUiState.value.searchStatus,
+                searchStatus =
+                if (mutableUiState.value.searchStatus is SearchStatus.Error) {
+                    if (mutableUiState.value.searchScope == null) SearchStatus.Idle else SearchStatus.Resolved
+                } else {
+                    mutableUiState.value.searchStatus
+                },
             )
     }
 

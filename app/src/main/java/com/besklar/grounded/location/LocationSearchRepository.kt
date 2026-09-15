@@ -15,6 +15,7 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 data class SearchScope(
     val label: String,
@@ -78,7 +79,9 @@ constructor(
                         }
 
                         override fun onError(errorMessage: String?) {
-                            if (continuation.isActive) continuation.resume(emptyList())
+                            if (continuation.isActive) {
+                                continuation.resumeWithException(IOException(errorMessage ?: "Geocoder failed"))
+                            }
                         }
                     },
                 )

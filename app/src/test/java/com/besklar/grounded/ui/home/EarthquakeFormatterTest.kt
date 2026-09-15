@@ -38,6 +38,12 @@ class EarthquakeFormatterTest {
         assertEquals("100 km north", EarthquakeFormatter.relativeLocation(relative, Locale.CANADA))
     }
 
+    @Test
+    fun `standalone distance uses locale measurement system`() {
+        assertEquals("500 mi", EarthquakeFormatter.distance(805.0, Locale.US))
+        assertEquals("805 km", EarthquakeFormatter.distance(805.0, Locale.FRANCE))
+    }
+
     private fun relative(occurredAt: Instant) = EarthquakeFormatter.relativeTime(occurredAt, now, Locale.US, ZoneOffset.UTC)
 
     private fun earthquake(magnitude: Double? = 2.5, place: String? = "Test") = Earthquake(

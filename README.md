@@ -13,8 +13,9 @@ Large text, dark theme, and landscape are supported through an adaptive two-pane
 ## Features
 
 - Recent worldwide earthquake activity from the official USGS seven-day GeoJSON feed
+- City or postal-code search with a deterministic 805 km / 500 mile result area
 - Shared time, magnitude, and ordering controls for the summary, map, and list
-- Scan-friendly list and interactive Google map with progressive marker clustering, backed by one shared dataset
+- Map-first discovery with progressive marker clustering, map layers, Locate me, and an expandable results sheet backed by one shared dataset
 - Full event details, official USGS links, and Android sharing
 - Offline-first Room cache with explicit freshness and failed-refresh states
 - Optional one-shot approximate location for local distance and compass direction
@@ -62,18 +63,19 @@ USGS → Retrofit → Repository → Room → Flow → ViewModel → Compose
 - **Remote layer:** private serialization DTOs and a mapper convert partial USGS input into a stable domain model. A malformed event can be discarded without losing other usable events.
 - **Data layer:** Room is the durable source of truth. Refreshes atomically replace events and metadata only after a valid response; failed refreshes retain the last successful snapshot.
 - **UI layer:** screen-level ViewModels expose immutable `StateFlow`. Compose renders state and sends user actions upward. Navigation passes stable event IDs rather than serialized screen objects.
-- **Location:** a singleton in-memory repository holds at most one approximate fix. Pure functions calculate great-circle distance and compass direction locally.
+- **Location and place search:** a singleton in-memory repository holds at most one approximate fix, while a small system-geocoder adapter resolves an entered city or postal code. Pure functions calculate great-circle distance, compass direction, and geographic result membership locally.
 
 The code intentionally remains one Gradle module. Package boundaries provide separation without paying the build and maintenance cost of premature modularization. Hilt is used only at system boundaries; small product rules remain ordinary testable Kotlin.
 
 A more detailed explanation is available in [docs/architecture.md](docs/architecture.md).
 
-The accepted design for the next map-first search and expandable-results experience is documented in [docs/map-first-design.md](docs/map-first-design.md).
+The implemented map-first search and expandable-results behavior is documented in [docs/map-first-design.md](docs/map-first-design.md).
 
 ## Product decisions
 
 - Grounded caches the USGS seven-day feed once, then filters it locally. The documented default is past 24 hours, all magnitudes, newest first.
 - A nearby significant event is magnitude 4.5+ within 805 km / 500 miles.
+- A resolved city or postal code applies the same fixed 805 km / 500 mile radius to the summary, map, count, and list. Panning the map does not silently change that result set.
 - Unknown values remain unknown; Grounded never turns missing magnitude into `0.0`.
 - Invalid coordinates exclude an event from Map but never from List.
 - Saved data becomes visibly stale after 30 minutes from the last successful retrieval.
@@ -88,7 +90,7 @@ Offline map tiles are not included; the list and cached event details remain the
 
 ## Location and privacy
 
-Grounded does not display the Android permission dialog on first launch. The user first chooses “See earthquakes relative to you” and receives an explanation. Only `ACCESS_COARSE_LOCATION` is requested. No precise or background permission is requested, location is not uploaded, and coordinates are not stored in Room. A last-known location is accepted only when no older than 30 minutes.
+Grounded does not display the Android permission dialog on first launch. The user first chooses Locate me or the list’s location action and receives an explanation. Only `ACCESS_COARSE_LOCATION` is requested. No precise or background permission is requested, location is not uploaded, and coordinates are not stored in Room. A last-known location is accepted only when no older than 30 minutes.
 
 Denial leaves all non-relative features working. A permanently denied permission is followed by a user-initiated path to Android application settings.
 
@@ -99,7 +101,7 @@ Denial leaves all non-relative features working. A permanently denied permission
 ./gradlew pixel2Api31DebugAndroidTest
 ```
 
-The current suite contains 41 JVM tests and 13 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, combined filter/sort rules, summaries, formatting, safe links and sharing, progressive map clustering, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
+The current suite contains 52 JVM tests and 18 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, saved-state restoration, city/postal normalization and geographic scope, combined filter/sort rules, summaries, formatting, safe links and sharing, progressive map clustering, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, search/result consistency, expandable-sheet behavior, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
 
 Manual release checks should cover:
 
@@ -114,9 +116,9 @@ Manual release checks should cover:
 ## Known limitations and next steps
 
 - Google Maps requires the developer’s own configured API key and network connectivity for tiles.
+- Place lookup uses Android’s system geocoder, so availability and result quality can vary by device and network provider.
 - Home-screen widgets, watched-area notifications, background polling, and offline map tiles are not implemented.
 - A production alerting feature would require explicit semantics and likely reliable backend push; this app makes no real-time-warning claim.
-- City/postal search and the expandable map-first results sheet are designed but not yet implemented.
 
 ## Attribution
 

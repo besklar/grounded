@@ -1,6 +1,6 @@
 # Map-first discovery design
 
-Status: accepted design for implementation
+Status: implemented and release-audited on 2026-09-14
 
 This document defines Grounded's next home experience. The interaction is informed by established map-and-results products, but the visual language, copy, earthquake semantics, privacy behavior, and accessibility remain Grounded's own.
 
@@ -314,15 +314,15 @@ Cluster activation zooms toward its members. It never replaces the result count 
 
 ## Implementation slices
 
-Each slice is a separate Linear ticket and commit:
+Each slice was delivered as a separate tracked ticket and commit:
 
-1. BES-21 — City and postal-code search plus deterministic geographic scope.
-2. BES-22 — Map-first home shell, search surface, layers/filter/location overlays, and responsive layout.
-3. BES-23 — Persistent count peek, expanded list, Back behavior, and floating Map action.
-4. BES-20 — Progressive marker clustering and cluster interaction.
-5. BES-24 — Integrated accessibility, restoration, performance, documentation, and release audit.
+1. City and postal-code search plus deterministic geographic scope.
+2. Map-first home shell, search surface, layers/filter/location overlays, and responsive layout.
+3. Persistent count peek, expanded list, Back behavior, and floating Map action.
+4. Progressive marker clustering and cluster interaction.
+5. Integrated accessibility, restoration, performance, documentation, and release audit.
 
-Recommended integration order: BES-21 and BES-22 can begin independently after this design; BES-23 follows the shell; BES-20 can build against the current map and then integrate into the shell; BES-24 closes after all four implementation tickets.
+The release audit verifies the combined behavior rather than treating search, map, clustering, and results as independent screens.
 
 ## References
 

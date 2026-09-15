@@ -13,6 +13,8 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso.pressBack
 import com.besklar.grounded.location.LocationContext
+import com.besklar.grounded.location.SearchScope
+import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
 import com.besklar.grounded.ui.theme.GroundedTheme
@@ -36,6 +38,7 @@ class HomeScreenTest {
                     onMapEventSelected = {},
                     onOpenDetails = {},
                     onRequestLocation = {},
+                    mapsConfigured = false,
                 )
             }
         }
@@ -337,25 +340,64 @@ class HomeScreenTest {
         composeRule.onNodeWithContentDescription("Locate me").assertIsDisplayed()
     }
 
+    @Test
+    fun placeScopeFiltersTheSharedResultCountAndList() {
+        val now = Instant.now()
+        val near = earthquake("near", "Near event", Coordinates(0.1, 0.1), now)
+        val far = earthquake("far", "Far event", Coordinates(20.0, 20.0), now)
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state =
+                    HomeUiState(
+                        snapshot = snapshot(listOf(near, far)),
+                        mode = HomeMode.LIST,
+                        initialAttemptFinished = true,
+                        searchQuery = "Origin",
+                        searchScope = SearchScope("Origin", Coordinates(0.0, 0.0)),
+                        searchStatus = SearchStatus.Resolved,
+                    ),
+                    onModeSelected = {},
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onMapEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = {},
+                    mapsConfigured = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("1 result").assertIsDisplayed()
+        composeRule.onNodeWithText("Near event").assertIsDisplayed()
+        composeRule.onNodeWithText("Far event").assertDoesNotExist()
+    }
+
     private fun snapshot(earthquakes: List<Earthquake>? = null): EarthquakeSnapshot {
         val now = Instant.now()
-        val earthquake =
-            Earthquake(
-                "test-event",
-                3.2,
-                "ml",
-                "Test place",
-                now,
-                now,
-                null,
-                4.0,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-            )
+        val earthquake = earthquake("test-event", "Test place", null, now)
         return EarthquakeSnapshot(earthquakes ?: listOf(earthquake), "past_24_hours", now, now, null, "USGS")
     }
+
+    private fun earthquake(
+        id: String,
+        place: String,
+        coordinates: Coordinates?,
+        now: Instant,
+    ) = Earthquake(
+        id,
+        3.2,
+        "ml",
+        place,
+        now,
+        now,
+        coordinates,
+        4.0,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+    )
 }

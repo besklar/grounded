@@ -22,7 +22,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Map
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,13 +46,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -65,7 +59,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,6 +79,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.besklar.grounded.R
 import com.besklar.grounded.location.LocationContext
+import com.besklar.grounded.location.SearchScope
 import com.google.maps.android.compose.MapType
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -106,6 +100,7 @@ fun HomeScreen(
     onSearchQueryChanged: (String) -> Unit = {},
     onSearch: () -> Unit = {},
     onClearSearch: () -> Unit = {},
+    mapsConfigured: Boolean = com.besklar.grounded.BuildConfig.MAPS_CONFIGURED,
 ) {
     val userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates
     val visibleEarthquakes =
@@ -137,7 +132,7 @@ fun HomeScreen(
             PlaceSearchBar(
                 query = state.searchQuery,
                 status = state.searchStatus,
-                scopeLabel = state.searchScope?.label,
+                scope = state.searchScope,
                 onQueryChanged = onSearchQueryChanged,
                 onSearch = {
                     cameraIntent = "search"
@@ -165,6 +160,7 @@ fun HomeScreen(
                             locateRequest++
                             onRequestLocation()
                         },
+                        mapsConfigured = mapsConfigured,
                         modifier = Modifier.weight(0.62f).fillMaxHeight(),
                     )
                     Column(modifier = Modifier.weight(0.38f).fillMaxHeight().padding(end = 12.dp)) {
@@ -181,8 +177,6 @@ fun HomeScreen(
                             filtersExcludedAll = filtersExcludedAll,
                             onRefresh = onRefresh,
                             onEventSelected = onEventSelected,
-                            onMapEventSelected = onMapEventSelected,
-                            onOpenDetails = onOpenDetails,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -209,6 +203,7 @@ fun HomeScreen(
                         locateRequest++
                         onRequestLocation()
                     },
+                    mapsConfigured = mapsConfigured,
                 )
             }
         }
@@ -234,6 +229,7 @@ private fun PortraitMapAndResults(
     onResetFilters: () -> Unit,
     onMapTypeChanged: (MapType) -> Unit,
     onLocate: () -> Unit,
+    mapsConfigured: Boolean,
 ) {
     val sheetState =
         rememberStandardBottomSheetState(
@@ -311,8 +307,6 @@ private fun PortraitMapAndResults(
                             filtersExcludedAll = filtersExcludedAll,
                             onRefresh = onRefresh,
                             onEventSelected = onEventSelected,
-                            onMapEventSelected = onMapEventSelected,
-                            onOpenDetails = onOpenDetails,
                             modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                             listState = listState,
                             listContentPadding = PaddingValues(bottom = 88.dp),
@@ -350,6 +344,7 @@ private fun PortraitMapAndResults(
             onResetFilters = onResetFilters,
             onMapTypeChanged = onMapTypeChanged,
             onLocate = onLocate,
+            mapsConfigured = mapsConfigured,
             modifier = Modifier.fillMaxSize(),
             showStatusOverlay = !expanded,
         )
@@ -360,7 +355,7 @@ private fun PortraitMapAndResults(
 private fun PlaceSearchBar(
     query: String,
     status: SearchStatus,
-    scopeLabel: String?,
+    scope: SearchScope?,
     onQueryChanged: (String) -> Unit,
     onSearch: () -> Unit,
     onClear: () -> Unit,
@@ -368,6 +363,7 @@ private fun PlaceSearchBar(
 ) {
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val locale = LocalConfiguration.current.locales[0]
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         OutlinedTextField(
             value = query,
@@ -398,9 +394,9 @@ private fun PlaceSearchBar(
         when (status) {
             SearchStatus.Searching -> Text(stringResource(R.string.searching_place), style = MaterialTheme.typography.labelMedium)
             SearchStatus.Resolved ->
-                scopeLabel?.let {
+                scope?.let {
                     Text(
-                        stringResource(R.string.within_search_area, it),
+                        stringResource(R.string.within_search_area, EarthquakeFormatter.distance(it.radiusKilometers, locale), it.label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -438,6 +434,7 @@ private fun MapSurface(
     onResetFilters: () -> Unit,
     onMapTypeChanged: (MapType) -> Unit,
     onLocate: () -> Unit,
+    mapsConfigured: Boolean,
     modifier: Modifier = Modifier,
     showStatusOverlay: Boolean = true,
 ) {
@@ -449,6 +446,7 @@ private fun MapSurface(
             selectedEventId = state.selectedEventId,
             onEventSelected = onMapEventSelected,
             onOpenDetails = onOpenDetails,
+            mapsConfigured = mapsConfigured,
             mapType = mapType,
             cameraFocus = cameraFocus,
             cameraFocusKey = cameraFocusKey,
@@ -547,42 +545,28 @@ private fun HomeModeContent(
     filtersExcludedAll: Boolean,
     onRefresh: () -> Unit,
     onEventSelected: (String) -> Unit,
-    onMapEventSelected: (String) -> Unit,
-    onOpenDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
     listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
     listContentPadding: PaddingValues = PaddingValues(),
 ) {
-    val saveableStateHolder = rememberSaveableStateHolder()
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when {
             state.isInitialLoading -> LoadingState()
             state.isFullScreenFailure -> FailureState(onRefresh)
             state.snapshot?.earthquakes?.isEmpty() == true -> EmptyState(filtersExcludedAll)
-            else -> saveableStateHolder.SaveableStateProvider(state.mode.name) {
-                if (state.mode == HomeMode.MAP) {
-                    EarthquakeMap(
-                        earthquakes = state.snapshot?.earthquakes.orEmpty(),
-                        userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
-                        selectedEventId = state.selectedEventId,
-                        onEventSelected = onMapEventSelected,
-                        onOpenDetails = onOpenDetails,
-                    )
-                } else {
-                    EarthquakeList(
-                        earthquakes = state.snapshot?.earthquakes.orEmpty(),
-                        refreshing = state.refreshStatus is RefreshStatus.Refreshing,
-                        refreshFailed = state.refreshStatus is RefreshStatus.Failed,
-                        lastUpdatedAt = state.snapshot?.lastSuccessfulRetrieval,
-                        newEventIds = state.newEventIds,
-                        onRefresh = onRefresh,
-                        onEventSelected = onEventSelected,
-                        userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
-                        listState = listState,
-                        contentPadding = listContentPadding,
-                    )
-                }
-            }
+            else ->
+                EarthquakeList(
+                    earthquakes = state.snapshot?.earthquakes.orEmpty(),
+                    refreshing = state.refreshStatus is RefreshStatus.Refreshing,
+                    refreshFailed = state.refreshStatus is RefreshStatus.Failed,
+                    lastUpdatedAt = state.snapshot?.lastSuccessfulRetrieval,
+                    newEventIds = state.newEventIds,
+                    onRefresh = onRefresh,
+                    onEventSelected = onEventSelected,
+                    userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
+                    listState = listState,
+                    contentPadding = listContentPadding,
+                )
         }
     }
 }
@@ -625,7 +609,16 @@ private fun SituationSummaryCard(
             } else {
                 when (summary) {
                     is SituationSummary.GlobalActivity ->
-                        pluralStringResource(
+                        state.searchScope?.let { scope ->
+                            pluralStringResource(
+                                R.plurals.events_near_place,
+                                summary.eventCount,
+                                summary.eventCount,
+                                EarthquakeFormatter.distance(scope.radiusKilometers, locale),
+                                scope.label,
+                                timeRangeLabel(state.filters.timeRange),
+                            )
+                        } ?: pluralStringResource(
                             R.plurals.events_in_range,
                             summary.eventCount,
                             summary.eventCount,
@@ -722,20 +715,6 @@ private fun SituationSummaryCard(
                 TextButton(onClick = { showLocationExplanation = false }) { Text(stringResource(R.string.not_now)) }
             },
         )
-    }
-}
-
-@Composable
-private fun ModeSelector(selected: HomeMode, onSelected: (HomeMode) -> Unit) {
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        HomeMode.entries.forEachIndexed { index, mode ->
-            SegmentedButton(
-                selected = mode == selected,
-                onClick = { onSelected(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index, HomeMode.entries.size),
-                label = { Text(stringResource(if (mode == HomeMode.MAP) R.string.map else R.string.list)) },
-            )
-        }
     }
 }
 

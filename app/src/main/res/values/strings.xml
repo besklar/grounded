@@ -3,7 +3,6 @@
     <string name="refresh">Refresh earthquake data</string>
     <string name="refreshing">Checking for updates…</string>
     <string name="map">Map</string>
-    <string name="list">List</string>
     <string name="recent_activity">Recent earthquake activity</string>
     <string name="checking_recent_activity">Checking recent activity</string>
     <string name="checking_recent_activity_explanation">Fetching the latest reported earthquakes from USGS.</string>
@@ -73,7 +72,11 @@
     <string name="search_place_not_found">We couldn’t find that city or postal code.</string>
     <string name="search_provider_unavailable">Place search isn’t available on this device.</string>
     <string name="search_place_failed">Place search failed. Check your connection and try again.</string>
-    <string name="within_search_area">within 500 miles of %1$s</string>
+    <string name="within_search_area">within %1$s of %2$s</string>
+    <plurals name="events_near_place">
+        <item quantity="one">%1$d event within %2$s of %3$s in %4$s</item>
+        <item quantity="other">%1$d events within %2$s of %3$s in %4$s</item>
+    </plurals>
     <string name="map_layers">Map layers</string>
     <string name="normal_map">Normal map</string>
     <string name="terrain_map">Terrain map</string>
