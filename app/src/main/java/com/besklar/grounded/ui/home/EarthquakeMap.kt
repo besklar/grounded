@@ -1,13 +1,17 @@
 package com.besklar.grounded.ui.home
 
-import android.graphics.Canvas
-import android.graphics.Paint
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.MyLocation
@@ -15,6 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,18 +29,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.createBitmap
 import com.besklar.grounded.BuildConfig
 import com.besklar.grounded.R
 import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -124,17 +126,15 @@ fun EarthquakeMap(
                     onEventSelected(item.id)
                     true
                 },
+                clusterContent = { cluster -> ClusterMarker(cluster.size) },
+                clusterItemContent = { item ->
+                    EarthquakeMarker(
+                        magnitude = item.displayMagnitude,
+                        severe = (item.magnitude ?: Double.NEGATIVE_INFINITY) >= 4.5,
+                        selected = item.id == selectedEventId,
+                    )
+                },
             )
-            mappable.firstOrNull { it.id == selectedEventId }?.let { selected ->
-                Marker(
-                    state = MarkerState(selected.mapPosition),
-                    title = selected.markerTitle,
-                    snippet = selected.markerSnippet,
-                    contentDescription = selected.contentDescription,
-                    icon = rememberMarkerIcon(selected.magnitude, selected = true),
-                    zIndex = 2f,
-                )
-            }
             userCoordinates?.let {
                 Marker(
                     state = MarkerState(LatLng(it.latitude, it.longitude)),
@@ -160,6 +160,50 @@ fun EarthquakeMap(
                 earthquake = selected,
                 onOpenDetails = { onOpenDetails(selected.id) },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClusterMarker(count: Int) {
+    Surface(
+        modifier = Modifier.size(48.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        border = BorderStroke(3.dp, MaterialTheme.colorScheme.surface),
+        shadowElevation = 5.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = if (count > 99) "99+" else count.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Black,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EarthquakeMarker(
+    magnitude: String,
+    severe: Boolean,
+    selected: Boolean,
+) {
+    Surface(
+        modifier = Modifier.widthIn(min = 44.dp).heightIn(min = 34.dp),
+        shape = RoundedCornerShape(50),
+        color = if (severe) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+        contentColor = if (severe) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+        border = BorderStroke(if (selected) 4.dp else 2.dp, MaterialTheme.colorScheme.surface),
+        shadowElevation = if (selected) 8.dp else 3.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)) {
+            Text(
+                text = "M$magnitude",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Black,
             )
         }
     }
@@ -203,33 +247,12 @@ private fun CompactMapSelection(
     }
 }
 
-@Composable
-private fun rememberMarkerIcon(magnitude: Double?, selected: Boolean): BitmapDescriptor {
-    val density = LocalDensity.current.density
-    val fill =
-        if ((magnitude ?: Double.NEGATIVE_INFINITY) >= 4.5) {
-            MaterialTheme.colorScheme.error
-        } else {
-            MaterialTheme.colorScheme.primary
-        }
-    val outline = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface
-    return remember(magnitude, selected, density, fill, outline) {
-        val normalized = ((magnitude ?: 0.0) + 1.0).coerceIn(0.0, 8.0)
-        val size = ((28.0 + normalized * 3.0) * density).toInt()
-        val bitmap = createBitmap(size, size)
-        val canvas = Canvas(bitmap)
-        val radius = size / 2f
-        canvas.drawCircle(radius, radius, radius * 0.88f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = outline.toArgb() })
-        canvas.drawCircle(radius, radius, radius * 0.68f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fill.toArgb() })
-        BitmapDescriptorFactory.fromBitmap(bitmap)
-    }
-}
-
 internal data class MapEarthquake(
     val id: String,
     val mapPosition: LatLng,
     val magnitude: Double?,
     val place: String?,
+    val displayMagnitude: String,
     val markerTitle: String,
     val markerSnippet: String,
     val contentDescription: String,
@@ -258,6 +281,7 @@ internal data class MapEarthquake(
                 mapPosition = LatLng(coordinates.latitude, coordinates.longitude),
                 magnitude = earthquake.magnitude,
                 place = earthquake.place,
+                displayMagnitude = magnitude,
                 markerTitle = place,
                 markerSnippet = "$magnitudeDescription $magnitude",
                 contentDescription = "$place, $magnitudeDescription $magnitude",

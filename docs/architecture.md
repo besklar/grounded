@@ -35,6 +35,8 @@ The repository caches one seven-day feed rather than separate results per filter
 
 Map clustering is a UI projection of that same selected list. The official Maps Compose utility groups nearby map items according to camera zoom, but it never changes the ViewModel's result count or the list. Tapping a cluster moves the camera toward its members; tapping an individual item selects the underlying stable earthquake ID.
 
+The visual system is centralized in `MaterialTheme`: a branded color palette, condensed display face, readable body face, and shared rounded shapes flow into every composable. Dynamic device colors are intentionally disabled by default so Grounded retains its identity, while system light/dark mode still selects a complete accessible palette. The title face is supplied by Android itself, so the interface remains fully styled without a font download or network dependency.
+
 ## Decisions intentionally deferred
 
 - No multi-module build: one application does not yet justify dependency graphs and slower project navigation.

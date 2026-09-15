@@ -25,6 +25,12 @@
     <string name="map_configuration_explanation">Add MAPS_API_KEY to local.properties, then rebuild. The earthquake list remains available without it.</string>
     <string name="view_details">View details</string>
     <string name="earthquake_details">Earthquake details</string>
+    <string name="reported_earthquake">Reported earthquake</string>
+    <string name="event_location">Event location</string>
+    <string name="event_facts">Event facts</string>
+    <string name="event_epicenter">Reported epicenter</string>
+    <string name="event_map_description">Map showing the reported epicenter of the magnitude %1$s earthquake</string>
+    <string name="map_preview_unavailable">Map preview unavailable. Coordinates remain available below.</string>
     <string name="loading_earthquake_details">Loading earthquake details</string>
     <string name="event_unavailable">Earthquake no longer available</string>
     <string name="event_unavailable_explanation">This event is not present in the latest saved dataset. It may have been revised or moved outside the current time window.</string>
@@ -32,7 +38,6 @@
     <string name="back">Back</string>
     <string name="occurred">Occurred</string>
     <string name="depth">Depth</string>
-    <string name="coordinates">Event coordinates</string>
     <string name="magnitude_type">Magnitude type</string>
     <string name="felt_reports">Felt reports</string>
     <string name="usgs_significance">USGS significance</string>

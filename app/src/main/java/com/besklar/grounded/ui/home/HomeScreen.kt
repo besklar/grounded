@@ -1,6 +1,7 @@
 package com.besklar.grounded.ui.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -127,10 +128,10 @@ fun HomeScreen(
             else -> null
         }
 
-    Scaffold(modifier = modifier) { padding ->
+    Scaffold(modifier = modifier, containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
                 verticalAlignment = Alignment.Top,
             ) {
                 FilterControls(
@@ -276,6 +277,7 @@ private fun PortraitMapAndResults(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = 72.dp,
+        sheetContainerColor = MaterialTheme.colorScheme.background,
         sheetContent = {
             Box(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
                 Column(modifier = Modifier.fillMaxSize()) {

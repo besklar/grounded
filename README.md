@@ -16,10 +16,10 @@ Large text, dark theme, and landscape are supported through an adaptive two-pane
 - City or postal-code search with selectable 50, 100, 250, or 500 mile result areas
 - Shared time, magnitude, and ordering controls for the summary, map, and list
 - Map-first discovery with progressive marker clustering, map layers, Locate me, and an expandable results sheet backed by one shared dataset
-- Full event details, official USGS links, and Android sharing
+- Branded, card-based list and event details with an at-a-glance epicenter map, official USGS links, and Android sharing
 - Offline-first Room cache with explicit freshness and failed-refresh states
 - Optional one-shot approximate location for local distance and compass direction
-- System light/dark theme, dynamic color, scalable text, and screen-reader semantics
+- Branded light/dark theme, scalable text, and screen-reader semantics
 - No account, custom backend, analytics, continuous tracking, or stored location history
 
 ## Requirements
@@ -101,7 +101,7 @@ Denial leaves all non-relative features working. A permanently denied permission
 ./gradlew pixel2Api31DebugAndroidTest
 ```
 
-The current suite contains 53 JVM tests and 18 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, saved-state restoration, city/postal normalization and configurable geographic scope, combined filter/sort rules, summaries, formatting, safe links and sharing, progressive map clustering, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, search/result consistency, expandable-sheet behavior, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
+The current suite contains 53 JVM tests and 19 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, saved-state restoration, city/postal normalization and configurable geographic scope, combined filter/sort rules, summaries, formatting, safe links and sharing, progressive map clustering, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, search/result consistency, expandable-sheet behavior, filter behavior, detail location fallback, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
 
 Manual release checks should cover:
 

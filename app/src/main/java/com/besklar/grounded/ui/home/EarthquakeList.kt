@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.besklar.grounded.R
 import com.besklar.grounded.location.RelativeLocationCalculator
@@ -58,7 +58,12 @@ fun EarthquakeList(
         onRefresh = onRefresh,
         modifier = modifier.fillMaxSize(),
     ) {
-        LazyColumn(state = listState, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
             if (refreshFailed) {
                 item(key = "offline") {
                     val locale = LocalConfiguration.current.locales[0]
@@ -66,7 +71,11 @@ fun EarthquakeList(
                         lastUpdatedAt?.let {
                             EarthquakeFormatter.relativeTime(it, Instant.now(), locale, ZoneId.systemDefault())
                         } ?: stringResource(R.string.unknown_time)
-                    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(
                             text = stringResource(R.string.offline_saved_results, age),
                             modifier = Modifier.padding(12.dp),
@@ -82,7 +91,6 @@ fun EarthquakeList(
                     onClick = { onEventSelected(earthquake.id) },
                     userCoordinates = userCoordinates,
                 )
-                HorizontalDivider()
             }
         }
     }
@@ -108,29 +116,54 @@ private fun EarthquakeRow(
             }
         }
     val accessibilityLabel = stringResource(R.string.earthquake_row_description, magnitude, place, relativeTime)
+    val magnitudeColor =
+        if ((earthquake.magnitude ?: Double.NEGATIVE_INFINITY) >= 4.5) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.primary
+        }
 
-    Row(
+    Surface(
         modifier =
         Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = accessibilityLabel }
-            .padding(vertical = 14.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.Top,
+            .semantics { contentDescription = accessibilityLabel },
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        shadowElevation = 1.dp,
     ) {
-        Text(text = magnitude, style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = place, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = listOfNotNull(relativeTime, depth, relative).joinToString(" · "),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isNew) StatusChip(stringResource(R.string.new_event))
-                earthquake.alert?.let { StatusChip(it.uppercase(locale)) }
-                if (earthquake.tsunami == true) StatusChip(stringResource(R.string.tsunami_flag))
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(horizontalAlignment = Alignment.Start) {
+                Text(
+                    text = "M",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = magnitude,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Black,
+                    color = magnitudeColor,
+                )
+            }
+            Spacer(Modifier.width(18.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(text = place, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = listOfNotNull(relativeTime, depth, relative).joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (isNew) StatusChip(stringResource(R.string.new_event))
+                    earthquake.alert?.let { StatusChip(it.uppercase(locale)) }
+                    if (earthquake.tsunami == true) StatusChip(stringResource(R.string.tsunami_flag))
+                }
             }
         }
     }

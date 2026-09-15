@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
+import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.ui.theme.GroundedTheme
 import org.junit.Assert.assertTrue
@@ -55,6 +56,25 @@ class DetailScreenTest {
 
         composeRule.onNodeWithText("Share").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("USGS").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun coordinatesAddAnAccessibleLocationSectionWithoutRequiringMapsConfiguration() {
+        composeRule.setContent {
+            GroundedTheme {
+                DetailScreen(
+                    earthquake = earthquake().copy(coordinates = Coordinates(39.7, -104.9)),
+                    relativeLocation = null,
+                    isLoading = false,
+                    onBack = {},
+                    mapsConfigured = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Event location").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Map preview unavailable", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("39.7", substring = true).assertIsDisplayed()
     }
 
     private fun earthquake(): Earthquake {
