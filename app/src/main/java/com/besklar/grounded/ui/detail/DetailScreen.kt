@@ -48,6 +48,7 @@ import java.util.Date
 fun DetailScreen(
     earthquake: Earthquake?,
     relativeLocation: RelativeLocation?,
+    isLoading: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -64,12 +65,17 @@ fun DetailScreen(
             )
         },
     ) { padding ->
-        if (earthquake == null) {
+        if (earthquake == null && isLoading) {
             Column(
                 Modifier.fillMaxSize().padding(padding),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
-            ) { CircularProgressIndicator() }
+            ) {
+                CircularProgressIndicator()
+                Text(stringResource(R.string.loading_earthquake_details))
+            }
+        } else if (earthquake == null) {
+            MissingEvent(onBack = onBack, modifier = Modifier.padding(padding))
         } else {
             DetailContent(earthquake, relativeLocation, Modifier.padding(padding))
         }
@@ -117,10 +123,15 @@ private fun DetailContent(
         earthquake.feltReports?.let { DetailRow(stringResource(R.string.felt_reports), number.format(it)) }
         earthquake.significance?.let { DetailRow(stringResource(R.string.usgs_significance), number.format(it)) }
         earthquake.alert?.let { DetailRow(stringResource(R.string.alert_level), it.replaceFirstChar(Char::uppercase)) }
-        earthquake.tsunami?.let { DetailRow(stringResource(R.string.tsunami), if (it) "Flagged" else "Not flagged") }
+        earthquake.tsunami?.let {
+            DetailRow(
+                stringResource(R.string.tsunami),
+                stringResource(if (it) R.string.flagged else R.string.not_flagged),
+            )
+        }
         earthquake.reviewStatus?.let { DetailRow(stringResource(R.string.review_status), it.replaceFirstChar(Char::uppercase)) }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = {
                     val intent = Intent(Intent.ACTION_SEND).apply {
@@ -129,6 +140,7 @@ private fun DetailContent(
                     }
                     context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_earthquake)))
                 },
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Rounded.Share, contentDescription = null)
                 Text(stringResource(R.string.share))
@@ -142,6 +154,7 @@ private fun DetailContent(
                             // The official URL remains visible in share text; no unsafe fallback is attempted.
                         }
                     },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null)
                     Text(stringResource(R.string.usgs_source))
@@ -149,6 +162,24 @@ private fun DetailContent(
             }
         }
         Text(stringResource(R.string.usgs_attribution), style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun MissingEvent(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.event_unavailable), style = MaterialTheme.typography.titleLarge)
+        Text(
+            stringResource(R.string.event_unavailable_explanation),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.back_to_earthquakes))
+        }
     }
 }
 

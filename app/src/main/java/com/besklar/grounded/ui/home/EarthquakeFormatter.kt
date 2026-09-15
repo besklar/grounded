@@ -11,7 +11,9 @@ import java.util.Date
 import java.util.Locale
 
 object EarthquakeFormatter {
-    fun magnitude(earthquake: Earthquake, locale: Locale): String = earthquake.magnitude?.let { NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 1 }.format(it) } ?: "—"
+    fun magnitude(earthquake: Earthquake, locale: Locale): String = earthquake.magnitude?.let { magnitudeValue(it, locale) } ?: "—"
+
+    fun magnitudeValue(magnitude: Double, locale: Locale): String = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 1 }.format(magnitude)
 
     fun place(earthquake: Earthquake, locale: Locale): String = earthquake.place
         ?: earthquake.coordinates?.let {

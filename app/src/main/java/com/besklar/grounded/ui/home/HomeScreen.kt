@@ -1,14 +1,18 @@
 package com.besklar.grounded.ui.home
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
@@ -32,9 +36,13 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.besklar.grounded.R
@@ -65,39 +73,81 @@ fun HomeScreen(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
-            SituationSummaryCard(state, onRequestLocation)
-            Spacer(Modifier.height(16.dp))
-            ModeSelector(state.mode, onModeSelected)
-            Spacer(Modifier.height(12.dp))
-            val saveableStateHolder = rememberSaveableStateHolder()
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                when {
-                    state.isInitialLoading -> LoadingState()
-                    state.isFullScreenFailure -> FailureState(onRefresh)
-                    state.snapshot?.earthquakes?.isEmpty() == true -> EmptyState()
-                    else -> saveableStateHolder.SaveableStateProvider(state.mode.name) {
-                        if (state.mode == HomeMode.MAP) {
-                            EarthquakeMap(
-                                earthquakes = state.snapshot?.earthquakes.orEmpty(),
-                                userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
-                                selectedEventId = state.selectedEventId,
-                                onEventSelected = onMapEventSelected,
-                                onOpenDetails = onOpenDetails,
-                            )
-                        } else {
-                            EarthquakeList(
-                                earthquakes = state.snapshot?.earthquakes.orEmpty(),
-                                refreshing = state.refreshStatus is RefreshStatus.Refreshing,
-                                refreshFailed = state.refreshStatus is RefreshStatus.Failed,
-                                lastUpdatedAt = state.snapshot?.lastSuccessfulRetrieval,
-                                newEventIds = state.newEventIds,
-                                onRefresh = onRefresh,
-                                onEventSelected = onEventSelected,
-                                userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
-                            )
-                        }
-                    }
+        val contentModifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            Row(modifier = contentModifier, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                SituationSummaryCard(
+                    state = state,
+                    onRequestLocation = onRequestLocation,
+                    modifier = Modifier.weight(0.42f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                )
+                Column(modifier = Modifier.weight(0.58f).fillMaxHeight()) {
+                    ModeSelector(state.mode, onModeSelected)
+                    Spacer(Modifier.height(12.dp))
+                    HomeModeContent(
+                        state = state,
+                        onRefresh = onRefresh,
+                        onEventSelected = onEventSelected,
+                        onMapEventSelected = onMapEventSelected,
+                        onOpenDetails = onOpenDetails,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        } else {
+            Column(modifier = contentModifier) {
+                SituationSummaryCard(state, onRequestLocation)
+                Spacer(Modifier.height(16.dp))
+                ModeSelector(state.mode, onModeSelected)
+                Spacer(Modifier.height(12.dp))
+                HomeModeContent(
+                    state = state,
+                    onRefresh = onRefresh,
+                    onEventSelected = onEventSelected,
+                    onMapEventSelected = onMapEventSelected,
+                    onOpenDetails = onOpenDetails,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeModeContent(
+    state: HomeUiState,
+    onRefresh: () -> Unit,
+    onEventSelected: (String) -> Unit,
+    onMapEventSelected: (String) -> Unit,
+    onOpenDetails: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val saveableStateHolder = rememberSaveableStateHolder()
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        when {
+            state.isInitialLoading -> LoadingState()
+            state.isFullScreenFailure -> FailureState(onRefresh)
+            state.snapshot?.earthquakes?.isEmpty() == true -> EmptyState()
+            else -> saveableStateHolder.SaveableStateProvider(state.mode.name) {
+                if (state.mode == HomeMode.MAP) {
+                    EarthquakeMap(
+                        earthquakes = state.snapshot?.earthquakes.orEmpty(),
+                        userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
+                        selectedEventId = state.selectedEventId,
+                        onEventSelected = onMapEventSelected,
+                        onOpenDetails = onOpenDetails,
+                    )
+                } else {
+                    EarthquakeList(
+                        earthquakes = state.snapshot?.earthquakes.orEmpty(),
+                        refreshing = state.refreshStatus is RefreshStatus.Refreshing,
+                        refreshFailed = state.refreshStatus is RefreshStatus.Failed,
+                        lastUpdatedAt = state.snapshot?.lastSuccessfulRetrieval,
+                        newEventIds = state.newEventIds,
+                        onRefresh = onRefresh,
+                        onEventSelected = onEventSelected,
+                        userCoordinates = (state.locationContext as? LocationContext.Available)?.coordinates,
+                    )
                 }
             }
         }
@@ -105,12 +155,16 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Unit) {
+private fun SituationSummaryCard(
+    state: HomeUiState,
+    onRequestLocation: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val calculator = SituationSummaryCalculator()
     val summary = calculator.calculate(state.snapshot, state.refreshStatus is RefreshStatus.Failed, state.locationContext)
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     var showLocationExplanation by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text =
             if (state.isInitialLoading) {
@@ -129,6 +183,7 @@ private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Un
                 }
             },
             style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { heading() },
         )
         Text(
             text =
@@ -181,6 +236,7 @@ private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Un
                         pluralStringResource(R.plurals.new_earthquakes, status.newCount, status.newCount)
                     },
                     style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             else -> Unit
         }
@@ -188,6 +244,12 @@ private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Un
             TextButton(onClick = { showLocationExplanation = true }) {
                 Text(stringResource(R.string.add_location_context))
             }
+        }
+        when (state.locationContext) {
+            LocationContext.Loading -> Text(stringResource(R.string.finding_location))
+            LocationContext.ServicesDisabled -> Text(stringResource(R.string.location_services_disabled))
+            LocationContext.Unavailable -> Text(stringResource(R.string.location_unavailable))
+            else -> Unit
         }
     }
     if (showLocationExplanation) {
@@ -217,12 +279,6 @@ private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Un
                 TextButton(onClick = { showLocationExplanation = false }) { Text(stringResource(R.string.not_now)) }
             },
         )
-    }
-    when (state.locationContext) {
-        LocationContext.Loading -> Text(stringResource(R.string.finding_location))
-        LocationContext.ServicesDisabled -> Text(stringResource(R.string.location_services_disabled))
-        LocationContext.Unavailable -> Text(stringResource(R.string.location_unavailable))
-        else -> Unit
     }
 }
 

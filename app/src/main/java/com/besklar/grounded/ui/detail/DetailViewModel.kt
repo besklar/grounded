@@ -19,6 +19,7 @@ import javax.inject.Inject
 data class DetailUiState(
     val earthquake: Earthquake? = null,
     val relativeLocation: RelativeLocation? = null,
+    val isResolved: Boolean = false,
 )
 
 @HiltViewModel
@@ -38,6 +39,6 @@ constructor(
                 (location as? LocationContext.Available)?.coordinates?.let { user ->
                     earthquake?.coordinates?.let { event -> RelativeLocationCalculator.calculate(user, event) }
                 }
-            DetailUiState(earthquake, relative)
+            DetailUiState(earthquake = earthquake, relativeLocation = relative, isResolved = snapshot != null)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailUiState())
 }

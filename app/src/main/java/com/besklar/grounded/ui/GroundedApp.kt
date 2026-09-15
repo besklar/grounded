@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -60,11 +62,13 @@ fun GroundedApp() {
                         viewModel.recordLocationDenial(permanently)
                     }
                 }
-            val alreadyGranted =
-                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                if (
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
                     PackageManager.PERMISSION_GRANTED
-            LaunchedEffect(alreadyGranted) {
-                if (alreadyGranted) viewModel.loadLocation()
+                ) {
+                    viewModel.loadLocation()
+                }
             }
             val openDetails: (String) -> Unit = { id ->
                 viewModel.selectEvent(id)
@@ -100,6 +104,7 @@ fun GroundedApp() {
             DetailScreen(
                 earthquake = detailState.earthquake,
                 relativeLocation = detailState.relativeLocation,
+                isLoading = !detailState.isResolved,
                 onBack = navController::navigateUp,
             )
         }

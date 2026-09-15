@@ -6,6 +6,10 @@ Grounded is informational. It is not an earthquake early-warning or emergency-sa
 
 ![Grounded earthquake list on Android](docs/grounded-home.png)
 
+Large text, dark theme, and landscape are supported through an adaptive two-pane layout:
+
+![Grounded in dark landscape mode at 180 percent font scale](docs/grounded-dark-large-landscape.png)
+
 ## Features
 
 - Recent worldwide earthquake activity from the official USGS past-day GeoJSON feed
@@ -100,6 +104,7 @@ Manual release checks should cover:
 - Light/dark themes, large font scale, landscape, and TalkBack
 - Refresh with changes, no changes, cached failure, and no-cache failure
 - Detail navigation, external USGS link, Android share, rotation, and process recreation
+
 
 ## Known limitations and next steps
 

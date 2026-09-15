@@ -21,7 +21,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +45,6 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import kotlinx.coroutines.launch
 
 @Composable
 fun EarthquakeMap(
@@ -64,7 +62,10 @@ fun EarthquakeMap(
 
     val mappable = remember(earthquakes) { earthquakes.mapNotNull(MapEarthquake::from) }
     val cameraState = rememberCameraPositionState()
-    val coroutineScope = rememberCoroutineScope()
+    val locale = LocalConfiguration.current.locales[0]
+    val unknownMagnitude = stringResource(R.string.unknown_magnitude)
+    val unknownLocation = stringResource(R.string.location_unavailable_short)
+    val magnitudeDescription = stringResource(R.string.magnitude_accessibility)
     var mapLoaded by remember { mutableStateOf(false) }
     var initialCameraSet by remember { mutableStateOf(false) }
 
@@ -88,9 +89,10 @@ fun EarthquakeMap(
                 val selected = item.id == selectedEventId
                 Marker(
                     state = MarkerState(item.position),
-                    title = item.place,
-                    snippet = item.magnitude?.let { "Magnitude $it" },
-                    contentDescription = "${item.place}, magnitude ${item.magnitude ?: "unknown"}",
+                    title = item.place ?: unknownLocation,
+                    snippet = item.magnitude?.let { stringResource(R.string.magnitude_value, EarthquakeFormatter.magnitudeValue(it, locale)) },
+                    contentDescription =
+                    "${item.place ?: unknownLocation}, $magnitudeDescription ${item.magnitude?.let { EarthquakeFormatter.magnitudeValue(it, locale) } ?: unknownMagnitude}",
                     icon = rememberMarkerIcon(item.magnitude, selected),
                     zIndex = if (selected) 2f else 1f,
                     onClick = {
@@ -102,8 +104,8 @@ fun EarthquakeMap(
             userCoordinates?.let {
                 Marker(
                     state = MarkerState(LatLng(it.latitude, it.longitude)),
-                    title = "Approximate location",
-                    contentDescription = "Your approximate location",
+                    title = stringResource(R.string.approximate_location),
+                    contentDescription = stringResource(R.string.your_approximate_location),
                     icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
                     zIndex = 3f,
                 )
@@ -112,9 +114,7 @@ fun EarthquakeMap(
         userCoordinates?.let { user ->
             FloatingActionButton(
                 onClick = {
-                    coroutineScope.launch {
-                        cameraState.animate(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), 6f))
-                    }
+                    cameraState.move(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), 6f))
                 },
                 modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
             ) {
@@ -195,7 +195,7 @@ internal data class MapEarthquake(
     val id: String,
     val position: LatLng,
     val magnitude: Double?,
-    val place: String,
+    val place: String?,
 ) {
     companion object {
         fun from(earthquake: Earthquake): MapEarthquake? {
@@ -204,7 +204,7 @@ internal data class MapEarthquake(
                 id = earthquake.id,
                 position = LatLng(coordinates.latitude, coordinates.longitude),
                 magnitude = earthquake.magnitude,
-                place = earthquake.place ?: "Location unavailable",
+                place = earthquake.place,
             )
         }
     }

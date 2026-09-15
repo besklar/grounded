@@ -25,6 +25,10 @@
     <string name="map_configuration_explanation">Add MAPS_API_KEY to local.properties, then rebuild. The earthquake list remains available without it.</string>
     <string name="view_details">View details</string>
     <string name="earthquake_details">Earthquake details</string>
+    <string name="loading_earthquake_details">Loading earthquake details</string>
+    <string name="event_unavailable">Earthquake no longer available</string>
+    <string name="event_unavailable_explanation">This event is not present in the latest saved dataset. It may have been revised or moved outside the current time window.</string>
+    <string name="back_to_earthquakes">Back to earthquakes</string>
     <string name="back">Back</string>
     <string name="occurred">Occurred</string>
     <string name="depth">Depth</string>
@@ -34,6 +38,8 @@
     <string name="usgs_significance">USGS significance</string>
     <string name="alert_level">Alert level</string>
     <string name="tsunami">Tsunami</string>
+    <string name="flagged">Flagged</string>
+    <string name="not_flagged">Not flagged</string>
     <string name="review_status">Review status</string>
     <string name="share">Share</string>
     <string name="share_earthquake">Share earthquake</string>
@@ -52,6 +58,12 @@
     <string name="not_now">Not now</string>
     <string name="distance_from_you">From you</string>
     <string name="recenter_map">Center map on my approximate location</string>
+    <string name="approximate_location">Approximate location</string>
+    <string name="your_approximate_location">Your approximate location</string>
+    <string name="location_unavailable_short">Location unavailable</string>
+    <string name="unknown_magnitude">unknown</string>
+    <string name="magnitude_accessibility">magnitude</string>
+    <string name="magnitude_value">Magnitude %1$s</string>
     <string name="offline_saved_results">Offline — showing saved results from %1$s</string>
     <string name="new_event">New</string>
     <string name="tsunami_flag">Tsunami flag</string>
