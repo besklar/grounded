@@ -118,15 +118,20 @@ constructor(
     }
 
     fun updateSearchQuery(query: String) {
+        val current = mutableUiState.value
+        if (query != current.searchQuery) {
+            searchJob?.cancel()
+            searchJob = null
+        }
         savedStateHandle[SEARCH_QUERY_KEY] = query
         mutableUiState.value =
-            mutableUiState.value.copy(
+            current.copy(
                 searchQuery = query,
                 searchStatus =
-                if (mutableUiState.value.searchStatus is SearchStatus.Error) {
-                    if (mutableUiState.value.searchScope == null) SearchStatus.Idle else SearchStatus.Resolved
+                if (current.searchStatus is SearchStatus.Error || current.searchStatus is SearchStatus.Searching) {
+                    if (current.searchScope == null) SearchStatus.Idle else SearchStatus.Resolved
                 } else {
-                    mutableUiState.value.searchStatus
+                    current.searchStatus
                 },
             )
     }

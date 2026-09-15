@@ -174,6 +174,31 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `editing the query prevents an older search from replacing newer input`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val pendingResult = CompletableDeferred<LocationSearchResult>()
+        val searchRepository =
+            object : LocationSearchRepository {
+                override suspend fun search(query: String): LocationSearchResult = pendingResult.await()
+            }
+        val viewModel = viewModel(FakeRepository(RefreshResult.Success(emptySet(), 0, 0)), searchRepository)
+        runCurrent()
+
+        viewModel.updateSearchQuery("Denver")
+        viewModel.submitSearch()
+        runCurrent()
+        viewModel.updateSearchQuery("Salt Lake City")
+        pendingResult.complete(
+            LocationSearchResult.Success(SearchScope("Denver, Colorado", Coordinates(39.7, -104.9))),
+        )
+        runCurrent()
+
+        assertEquals("Salt Lake City", viewModel.uiState.value.searchQuery)
+        assertEquals(null, viewModel.uiState.value.searchScope)
+        assertEquals(SearchStatus.Idle, viewModel.uiState.value.searchStatus)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
     fun `failed replacement search preserves the active scope`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
         val scope = SearchScope("Denver, Colorado", Coordinates(39.7, -104.9))
         val searchRepository = FakeLocationSearchRepository(LocationSearchResult.Success(scope))
