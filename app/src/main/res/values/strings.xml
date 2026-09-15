@@ -5,6 +5,8 @@
     <string name="map">Map</string>
     <string name="list">List</string>
     <string name="recent_activity">Recent earthquake activity</string>
+    <string name="checking_recent_activity">Checking recent activity</string>
+    <string name="checking_recent_activity_explanation">Fetching the latest reported earthquakes from USGS.</string>
     <string name="showing_saved_activity">Showing saved earthquake activity</string>
     <string name="no_recent_activity">No recent earthquake activity</string>
     <plurals name="events_past_day">
@@ -58,6 +60,10 @@
     <string name="stale_updated">Saved data — updated %1$s</string>
     <string name="up_to_date">Up to date</string>
     <string name="unknown_time">an unknown time</string>
+    <string name="open_settings">Open settings</string>
+    <string name="finding_location">Finding your approximate location…</string>
+    <string name="location_services_disabled">Location services are off. Grounded remains fully usable without them.</string>
+    <string name="location_unavailable">Approximate location is currently unavailable.</string>
     <plurals name="new_earthquakes">
         <item quantity="one">%1$d new earthquake</item>
         <item quantity="other">%1$d new earthquakes</item>

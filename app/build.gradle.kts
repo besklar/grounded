@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ManagedVirtualDevice
 import java.util.Properties
 
 plugins {
@@ -48,6 +49,13 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        managedDevices.allDevices {
+            create<ManagedVirtualDevice>("pixel2Api31") {
+                device = "Pixel 2"
+                apiLevel = 31
+                systemImageSource = "aosp"
+            }
+        }
     }
 
     lint {

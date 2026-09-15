@@ -101,7 +101,7 @@ constructor(
                     when (val result = repository.refresh()) {
                         is RefreshResult.Success -> {
                             newEventIds = result.newEventIds.takeIf { hadSnapshotBeforeRefresh }.orEmpty()
-                            RefreshStatus.Success(result.newEventIds.size)
+                            RefreshStatus.Success(newEventIds.size)
                         }
                         is RefreshResult.HttpFailure,
                         RefreshResult.DecodingFailure,

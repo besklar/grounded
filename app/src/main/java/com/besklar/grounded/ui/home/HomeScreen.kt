@@ -113,30 +113,38 @@ private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Un
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text =
-            when (summary) {
-                is SituationSummary.GlobalActivity -> stringResource(R.string.recent_activity)
-                is SituationSummary.SavedActivity -> stringResource(R.string.showing_saved_activity)
-                is SituationSummary.NearbySignificant ->
-                    stringResource(
-                        R.string.significant_nearby,
-                        EarthquakeFormatter.magnitude(summary.earthquake, locale),
-                    )
-                is SituationSummary.NoSignificantNearby -> stringResource(R.string.no_significant_nearby)
-                SituationSummary.NoActivity -> stringResource(R.string.no_recent_activity)
+            if (state.isInitialLoading) {
+                stringResource(R.string.checking_recent_activity)
+            } else {
+                when (summary) {
+                    is SituationSummary.GlobalActivity -> stringResource(R.string.recent_activity)
+                    is SituationSummary.SavedActivity -> stringResource(R.string.showing_saved_activity)
+                    is SituationSummary.NearbySignificant ->
+                        stringResource(
+                            R.string.significant_nearby,
+                            EarthquakeFormatter.magnitude(summary.earthquake, locale),
+                        )
+                    is SituationSummary.NoSignificantNearby -> stringResource(R.string.no_significant_nearby)
+                    SituationSummary.NoActivity -> stringResource(R.string.no_recent_activity)
+                }
             },
             style = MaterialTheme.typography.headlineSmall,
         )
         Text(
             text =
-            when (summary) {
-                is SituationSummary.GlobalActivity ->
-                    pluralStringResource(R.plurals.events_past_day, summary.eventCount, summary.eventCount)
-                is SituationSummary.SavedActivity ->
-                    pluralStringResource(R.plurals.saved_events_count, summary.eventCount, summary.eventCount)
-                is SituationSummary.NearbySignificant -> EarthquakeFormatter.relativeLocation(summary.relative, locale)
-                is SituationSummary.NoSignificantNearby ->
-                    pluralStringResource(R.plurals.nearby_events, summary.nearbyCount, summary.nearbyCount)
-                SituationSummary.NoActivity -> stringResource(R.string.no_results_explanation)
+            if (state.isInitialLoading) {
+                stringResource(R.string.checking_recent_activity_explanation)
+            } else {
+                when (summary) {
+                    is SituationSummary.GlobalActivity ->
+                        pluralStringResource(R.plurals.events_past_day, summary.eventCount, summary.eventCount)
+                    is SituationSummary.SavedActivity ->
+                        pluralStringResource(R.plurals.saved_events_count, summary.eventCount, summary.eventCount)
+                    is SituationSummary.NearbySignificant -> EarthquakeFormatter.relativeLocation(summary.relative, locale)
+                    is SituationSummary.NoSignificantNearby ->
+                        pluralStringResource(R.plurals.nearby_events, summary.nearbyCount, summary.nearbyCount)
+                    SituationSummary.NoActivity -> stringResource(R.string.no_results_explanation)
+                }
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -193,12 +201,28 @@ private fun SituationSummaryCard(state: HomeUiState, onRequestLocation: () -> Un
                         showLocationExplanation = false
                         onRequestLocation()
                     },
-                ) { Text(stringResource(R.string.use_my_location)) }
+                ) {
+                    Text(
+                        stringResource(
+                            if ((state.locationContext as? LocationContext.Denied)?.permanently == true) {
+                                R.string.open_settings
+                            } else {
+                                R.string.use_my_location
+                            },
+                        ),
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showLocationExplanation = false }) { Text(stringResource(R.string.not_now)) }
             },
         )
+    }
+    when (state.locationContext) {
+        LocationContext.Loading -> Text(stringResource(R.string.finding_location))
+        LocationContext.ServicesDisabled -> Text(stringResource(R.string.location_services_disabled))
+        LocationContext.Unavailable -> Text(stringResource(R.string.location_unavailable))
+        else -> Unit
     }
 }
 
