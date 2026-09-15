@@ -47,6 +47,7 @@ fun EarthquakeMap(
     earthquakes: List<Earthquake>,
     selectedEventId: String?,
     onEventSelected: (String) -> Unit,
+    onOpenDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (!BuildConfig.MAPS_CONFIGURED) {
@@ -92,7 +93,11 @@ fun EarthquakeMap(
             }
         }
         earthquakes.firstOrNull { it.id == selectedEventId }?.let { selected ->
-            CompactMapSelection(selected, Modifier.align(Alignment.BottomCenter).padding(12.dp))
+            CompactMapSelection(
+                earthquake = selected,
+                onOpenDetails = { onOpenDetails(selected.id) },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+            )
         }
     }
 }
@@ -115,7 +120,11 @@ private fun MapConfigurationMissing(modifier: Modifier) {
 }
 
 @Composable
-private fun CompactMapSelection(earthquake: Earthquake, modifier: Modifier = Modifier) {
+private fun CompactMapSelection(
+    earthquake: Earthquake,
+    onOpenDetails: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val locale = LocalConfiguration.current.locales[0]
     Card(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -124,7 +133,9 @@ private fun CompactMapSelection(earthquake: Earthquake, modifier: Modifier = Mod
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(EarthquakeFormatter.place(earthquake, locale), style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.tap_marker_for_summary), style = MaterialTheme.typography.bodySmall)
+            androidx.compose.material3.TextButton(onClick = onOpenDetails) {
+                Text(stringResource(R.string.view_details))
+            }
         }
     }
 }

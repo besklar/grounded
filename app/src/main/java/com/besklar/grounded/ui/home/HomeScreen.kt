@@ -40,6 +40,8 @@ fun HomeScreen(
     onModeSelected: (HomeMode) -> Unit,
     onRefresh: () -> Unit,
     onEventSelected: (String) -> Unit,
+    onMapEventSelected: (String) -> Unit,
+    onOpenDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -71,7 +73,8 @@ fun HomeScreen(
                             EarthquakeMap(
                                 earthquakes = state.snapshot?.earthquakes.orEmpty(),
                                 selectedEventId = state.selectedEventId,
-                                onEventSelected = onEventSelected,
+                                onEventSelected = onMapEventSelected,
+                                onOpenDetails = onOpenDetails,
                             )
                         } else {
                             EarthquakeList(
