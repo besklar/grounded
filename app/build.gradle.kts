@@ -106,6 +106,7 @@ dependencies {
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)
     implementation(libs.google.maps.compose)
+    implementation(libs.google.maps.compose.utils)
     implementation(libs.google.play.services.location)
 
     testImplementation(libs.junit)

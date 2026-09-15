@@ -33,6 +33,8 @@ Refreshes are serialized to one job. Cached content remains visible during refre
 
 The repository caches one seven-day feed rather than separate results per filter. A pure selector applies the chosen time range, magnitude threshold, and ordering in memory; that exact list is passed to the summary, map, list, and empty-state decision. This is analogous to a memoized Redux selector: the durable store remains unchanged while the UI derives a focused view. Nearest ordering uses local distance calculation and falls back explicitly to recent ordering when location is unavailable.
 
+Map clustering is a UI projection of that same selected list. The official Maps Compose utility groups nearby map items according to camera zoom, but it never changes the ViewModel's result count or the list. Tapping a cluster moves the camera toward its members; tapping an individual item selects the underlying stable earthquake ID.
+
 ## Decisions intentionally deferred
 
 - No multi-module build: one application does not yet justify dependency graphs and slower project navigation.

@@ -64,7 +64,6 @@
     <string name="location_unavailable_short">Location unavailable</string>
     <string name="unknown_magnitude">unknown</string>
     <string name="magnitude_accessibility">magnitude</string>
-    <string name="magnitude_value">Magnitude %1$s</string>
     <string name="offline_saved_results">Offline — showing saved results from %1$s</string>
     <string name="new_event">New</string>
     <string name="tsunami_flag">Tsunami flag</string>

@@ -39,13 +39,18 @@ import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.clustering.Cluster
+import com.google.maps.android.clustering.ClusterItem
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.compose.rememberCameraPositionState
 
+@OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun EarthquakeMap(
     earthquakes: List<Earthquake>,
@@ -61,12 +66,23 @@ fun EarthquakeMap(
         return
     }
 
-    val mappable = remember(earthquakes) { earthquakes.mapNotNull(MapEarthquake::from) }
     val cameraState = rememberCameraPositionState()
     val locale = LocalConfiguration.current.locales[0]
     val unknownMagnitude = stringResource(R.string.unknown_magnitude)
     val unknownLocation = stringResource(R.string.location_unavailable_short)
     val magnitudeDescription = stringResource(R.string.magnitude_accessibility)
+    val mappable =
+        remember(earthquakes, locale, unknownMagnitude, unknownLocation, magnitudeDescription) {
+            earthquakes.mapNotNull { earthquake ->
+                MapEarthquake.from(
+                    earthquake = earthquake,
+                    unknownLocation = unknownLocation,
+                    magnitudeDescription = magnitudeDescription,
+                    unknownMagnitude = unknownMagnitude,
+                    magnitudeValue = { EarthquakeFormatter.magnitudeValue(it, locale) },
+                )
+            }
+        }
     var mapLoaded by remember { mutableStateOf(false) }
     var initialCameraSet by remember { mutableStateOf(false) }
 
@@ -86,20 +102,25 @@ fun EarthquakeMap(
             uiSettings = MapUiSettings(compassEnabled = true, myLocationButtonEnabled = false),
             onMapLoaded = { mapLoaded = true },
         ) {
-            mappable.forEach { item ->
-                val selected = item.id == selectedEventId
+            Clustering(
+                items = mappable,
+                onClusterClick = { cluster ->
+                    cameraState.move(clusterCameraUpdate(cluster, cameraState.position.zoom))
+                    true
+                },
+                onClusterItemClick = { item ->
+                    onEventSelected(item.id)
+                    true
+                },
+            )
+            mappable.firstOrNull { it.id == selectedEventId }?.let { selected ->
                 Marker(
-                    state = MarkerState(item.position),
-                    title = item.place ?: unknownLocation,
-                    snippet = item.magnitude?.let { stringResource(R.string.magnitude_value, EarthquakeFormatter.magnitudeValue(it, locale)) },
-                    contentDescription =
-                    "${item.place ?: unknownLocation}, $magnitudeDescription ${item.magnitude?.let { EarthquakeFormatter.magnitudeValue(it, locale) } ?: unknownMagnitude}",
-                    icon = rememberMarkerIcon(item.magnitude, selected),
-                    zIndex = if (selected) 2f else 1f,
-                    onClick = {
-                        onEventSelected(item.id)
-                        true
-                    },
+                    state = MarkerState(selected.mapPosition),
+                    title = selected.markerTitle,
+                    snippet = selected.markerSnippet,
+                    contentDescription = selected.contentDescription,
+                    icon = rememberMarkerIcon(selected.magnitude, selected = true),
+                    zIndex = 2f,
                 )
             }
             userCoordinates?.let {
@@ -194,31 +215,62 @@ private fun rememberMarkerIcon(magnitude: Double?, selected: Boolean): BitmapDes
 
 internal data class MapEarthquake(
     val id: String,
-    val position: LatLng,
+    val mapPosition: LatLng,
     val magnitude: Double?,
     val place: String?,
-) {
+    val markerTitle: String,
+    val markerSnippet: String,
+    val contentDescription: String,
+) : ClusterItem {
+    override fun getPosition(): LatLng = mapPosition
+
+    override fun getTitle(): String = markerTitle
+
+    override fun getSnippet(): String = markerSnippet
+
+    override fun getZIndex(): Float = 1f
+
     companion object {
-        fun from(earthquake: Earthquake): MapEarthquake? {
+        fun from(
+            earthquake: Earthquake,
+            unknownLocation: String = "Location unavailable",
+            magnitudeDescription: String = "magnitude",
+            unknownMagnitude: String = "unknown",
+            magnitudeValue: (Double) -> String = Double::toString,
+        ): MapEarthquake? {
             val coordinates = earthquake.coordinates ?: return null
+            val place = earthquake.place ?: unknownLocation
+            val magnitude = earthquake.magnitude?.let(magnitudeValue) ?: unknownMagnitude
             return MapEarthquake(
                 id = earthquake.id,
-                position = LatLng(coordinates.latitude, coordinates.longitude),
+                mapPosition = LatLng(coordinates.latitude, coordinates.longitude),
                 magnitude = earthquake.magnitude,
                 place = earthquake.place,
+                markerTitle = place,
+                markerSnippet = "$magnitudeDescription $magnitude",
+                contentDescription = "$place, $magnitudeDescription $magnitude",
             )
         }
     }
 }
 
+private fun clusterCameraUpdate(cluster: Cluster<MapEarthquake>, currentZoom: Float) = clusterCameraUpdate(cluster.items.map(MapEarthquake::mapPosition), currentZoom)
+
+internal fun clusterCameraUpdate(positions: Collection<LatLng>, currentZoom: Float) = if (positions.distinct().size <= 1) {
+    CameraUpdateFactory.newLatLngZoom(positions.first(), (currentZoom + 2f).coerceAtMost(20f))
+} else {
+    val bounds = LatLngBounds.builder().apply { positions.forEach(::include) }.build()
+    CameraUpdateFactory.newLatLngBounds(bounds, 96)
+}
+
 private fun initialCameraUpdate(events: List<MapEarthquake>, userCoordinates: Coordinates?) = if (events.size == 1 && userCoordinates == null) {
-    CameraUpdateFactory.newLatLngZoom(events.single().position, 5f)
+    CameraUpdateFactory.newLatLngZoom(events.single().mapPosition, 5f)
 } else {
     val bounds =
         LatLngBounds
             .builder()
             .apply {
-                events.forEach { include(it.position) }
+                events.forEach { include(it.mapPosition) }
                 userCoordinates?.let { include(LatLng(it.latitude, it.longitude)) }
             }.build()
     CameraUpdateFactory.newLatLngBounds(bounds, 96)

@@ -14,7 +14,7 @@ Large text, dark theme, and landscape are supported through an adaptive two-pane
 
 - Recent worldwide earthquake activity from the official USGS seven-day GeoJSON feed
 - Shared time, magnitude, and ordering controls for the summary, map, and list
-- Scan-friendly list and interactive Google map backed by one shared dataset
+- Scan-friendly list and interactive Google map with progressive marker clustering, backed by one shared dataset
 - Full event details, official USGS links, and Android sharing
 - Offline-first Room cache with explicit freshness and failed-refresh states
 - Optional one-shot approximate location for local distance and compass direction
@@ -99,7 +99,7 @@ Denial leaves all non-relative features working. A permanently denied permission
 ./gradlew pixel2Api31DebugAndroidTest
 ```
 
-The current suite contains 37 JVM tests and 13 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, combined filter/sort rules, summaries, formatting, safe links and sharing, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
+The current suite contains 41 JVM tests and 13 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, combined filter/sort rules, summaries, formatting, safe links and sharing, progressive map clustering, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
 
 Manual release checks should cover:
 
@@ -116,7 +116,7 @@ Manual release checks should cover:
 - Google Maps requires the developer’s own configured API key and network connectivity for tiles.
 - Home-screen widgets, watched-area notifications, background polling, and offline map tiles are not implemented.
 - A production alerting feature would require explicit semantics and likely reliable backend push; this app makes no real-time-warning claim.
-- Marker clustering can be added if real representative datasets show a measurable usability or performance need.
+- City/postal search and the expandable map-first results sheet are designed but not yet implemented.
 
 ## Attribution
 
