@@ -19,7 +19,9 @@
     <string name="loading_earthquakes">Loading recent earthquakes</string>
     <string name="could_not_load">Earthquake data is unavailable</string>
     <string name="retry">Retry</string>
-    <string name="map_coming_next">Map view</string>
+    <string name="map_configuration_needed">Map setup needed</string>
+    <string name="map_configuration_explanation">Add MAPS_API_KEY to local.properties, then rebuild. The earthquake list remains available without it.</string>
+    <string name="tap_marker_for_summary">Selected earthquake</string>
     <string name="offline_saved_results">Offline — showing saved results</string>
     <string name="new_event">New</string>
     <string name="tsunami_flag">Tsunami flag</string>

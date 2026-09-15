@@ -23,6 +23,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -59,21 +60,30 @@ fun HomeScreen(
             Spacer(Modifier.height(16.dp))
             ModeSelector(state.mode, onModeSelected)
             Spacer(Modifier.height(12.dp))
+            val saveableStateHolder = rememberSaveableStateHolder()
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when {
                     state.isInitialLoading -> LoadingState()
                     state.isFullScreenFailure -> FailureState(onRefresh)
                     state.snapshot?.earthquakes?.isEmpty() == true -> EmptyState()
-                    state.mode == HomeMode.MAP -> Text(stringResource(R.string.map_coming_next))
-                    else ->
-                        EarthquakeList(
-                            earthquakes = state.snapshot?.earthquakes.orEmpty(),
-                            refreshing = state.refreshStatus is RefreshStatus.Refreshing,
-                            refreshFailed = state.refreshStatus is RefreshStatus.Failed,
-                            newEventIds = state.newEventIds,
-                            onRefresh = onRefresh,
-                            onEventSelected = onEventSelected,
-                        )
+                    else -> saveableStateHolder.SaveableStateProvider(state.mode.name) {
+                        if (state.mode == HomeMode.MAP) {
+                            EarthquakeMap(
+                                earthquakes = state.snapshot?.earthquakes.orEmpty(),
+                                selectedEventId = state.selectedEventId,
+                                onEventSelected = onEventSelected,
+                            )
+                        } else {
+                            EarthquakeList(
+                                earthquakes = state.snapshot?.earthquakes.orEmpty(),
+                                refreshing = state.refreshStatus is RefreshStatus.Refreshing,
+                                refreshFailed = state.refreshStatus is RefreshStatus.Failed,
+                                newEventIds = state.newEventIds,
+                                onRefresh = onRefresh,
+                                onEventSelected = onEventSelected,
+                            )
+                        }
+                    }
                 }
             }
         }
