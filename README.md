@@ -106,7 +106,6 @@ Manual release checks should cover:
 - Refresh with changes, no changes, cached failure, and no-cache failure
 - Detail navigation, external USGS link, Android share, rotation, and process recreation
 
-
 ## Known limitations and next steps
 
 - Google Maps requires the developer’s own configured API key and network connectivity for tiles.
