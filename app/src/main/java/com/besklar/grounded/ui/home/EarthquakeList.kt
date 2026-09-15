@@ -3,6 +3,7 @@ package com.besklar.grounded.ui.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -48,14 +50,15 @@ fun EarthquakeList(
     onEventSelected: (String) -> Unit,
     userCoordinates: Coordinates?,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
-    val listState = rememberLazyListState()
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = onRefresh,
         modifier = modifier.fillMaxSize(),
     ) {
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+        LazyColumn(state = listState, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
             if (refreshFailed) {
                 item(key = "offline") {
                     val locale = LocalConfiguration.current.locales[0]

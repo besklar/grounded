@@ -38,7 +38,7 @@ sealed interface SearchStatus {
 
 data class HomeUiState(
     val snapshot: EarthquakeSnapshot? = null,
-    val mode: HomeMode = HomeMode.LIST,
+    val mode: HomeMode = HomeMode.MAP,
     val refreshStatus: RefreshStatus = RefreshStatus.Idle,
     val initialAttemptFinished: Boolean = false,
     val selectedEventId: String? = null,

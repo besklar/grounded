@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import androidx.test.espresso.Espresso.pressBack
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
@@ -48,7 +49,7 @@ class HomeScreenTest {
         composeRule.setContent {
             GroundedTheme {
                 HomeScreen(
-                    state = HomeUiState(snapshot = snapshot(), initialAttemptFinished = true),
+                    state = HomeUiState(snapshot = snapshot(), mode = HomeMode.LIST, initialAttemptFinished = true),
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = { selected = it },
@@ -93,6 +94,7 @@ class HomeScreenTest {
                     state =
                     HomeUiState(
                         snapshot = snapshot(),
+                        mode = HomeMode.LIST,
                         refreshStatus = RefreshStatus.Failed,
                         initialAttemptFinished = true,
                     ),
@@ -115,7 +117,7 @@ class HomeScreenTest {
         composeRule.setContent {
             GroundedTheme {
                 HomeScreen(
-                    state = HomeUiState(snapshot = snapshot(emptyList()), initialAttemptFinished = true),
+                    state = HomeUiState(snapshot = snapshot(emptyList()), mode = HomeMode.LIST, initialAttemptFinished = true),
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
@@ -138,6 +140,7 @@ class HomeScreenTest {
                     state =
                     HomeUiState(
                         snapshot = snapshot(),
+                        mode = HomeMode.LIST,
                         initialAttemptFinished = true,
                         locationContext = LocationContext.NotRequested,
                     ),
@@ -181,7 +184,7 @@ class HomeScreenTest {
         composeRule.setContent {
             GroundedTheme {
                 HomeScreen(
-                    state = HomeUiState(snapshot = snapshot(), initialAttemptFinished = true, filters = filters),
+                    state = HomeUiState(snapshot = snapshot(), mode = HomeMode.LIST, initialAttemptFinished = true, filters = filters),
                     onModeSelected = {},
                     onRefresh = {},
                     onEventSelected = {},
@@ -211,6 +214,7 @@ class HomeScreenTest {
                     state =
                     HomeUiState(
                         snapshot = snapshot(listOf(oldEvent)),
+                        mode = HomeMode.LIST,
                         initialAttemptFinished = true,
                         filters = HomeFilters(timeRange = TimeRange.PAST_HOUR),
                     ),
@@ -279,6 +283,58 @@ class HomeScreenTest {
         composeRule.onNodeWithContentDescription("Locate me").performClick()
         composeRule.onNodeWithText("Your location is not uploaded or stored", substring = true).assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(false, requested) }
+    }
+
+    @Test
+    fun resultPeekExpandsAndMapButtonCollapsesIt() {
+        var mode by mutableStateOf(HomeMode.MAP)
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state = HomeUiState(snapshot = snapshot(), mode = mode, initialAttemptFinished = true),
+                    onModeSelected = { mode = it },
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onMapEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = {},
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("1 result. Expand results.").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("Collapse results and return to map").assertIsDisplayed().performClick()
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { assertEquals(HomeMode.MAP, mode) }
+        composeRule.onNodeWithContentDescription("Locate me").assertIsDisplayed()
+    }
+
+    @Test
+    fun systemBackCollapsesExpandedResultsBeforeLeavingHome() {
+        var mode by mutableStateOf(HomeMode.LIST)
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state = HomeUiState(snapshot = snapshot(), mode = mode, initialAttemptFinished = true),
+                    onModeSelected = { mode = it },
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onMapEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = {},
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        pressBack()
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { assertEquals(HomeMode.MAP, mode) }
+        composeRule.onNodeWithContentDescription("Locate me").assertIsDisplayed()
     }
 
     private fun snapshot(earthquakes: List<Earthquake>? = null): EarthquakeSnapshot {

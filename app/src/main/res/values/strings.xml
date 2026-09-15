@@ -79,10 +79,12 @@
     <string name="terrain_map">Terrain map</string>
     <string name="satellite_map">Satellite map</string>
     <string name="locate_me">Locate me</string>
-    <plurals name="show_results">
-        <item quantity="one">Show %1$d result</item>
-        <item quantity="other">Show %1$d results</item>
+    <plurals name="results_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
     </plurals>
+    <string name="expand_results_description">%1$s. Expand results.</string>
+    <string name="show_map_description">Collapse results and return to map</string>
     <string name="earthquake_row_description">Magnitude %1$s, %2$s, %3$s. View details.</string>
     <string name="last_updated">Updated %1$s</string>
     <string name="stale_updated">Saved data — updated %1$s</string>
