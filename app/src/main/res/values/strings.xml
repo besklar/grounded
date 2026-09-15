@@ -67,6 +67,22 @@
     <string name="offline_saved_results">Offline — showing saved results from %1$s</string>
     <string name="new_event">New</string>
     <string name="tsunami_flag">Tsunami flag</string>
+    <string name="search_place_hint">City or postal code</string>
+    <string name="clear_search">Clear place search</string>
+    <string name="searching_place">Searching…</string>
+    <string name="search_place_not_found">We couldn’t find that city or postal code.</string>
+    <string name="search_provider_unavailable">Place search isn’t available on this device.</string>
+    <string name="search_place_failed">Place search failed. Check your connection and try again.</string>
+    <string name="within_search_area">within 500 miles of %1$s</string>
+    <string name="map_layers">Map layers</string>
+    <string name="normal_map">Normal map</string>
+    <string name="terrain_map">Terrain map</string>
+    <string name="satellite_map">Satellite map</string>
+    <string name="locate_me">Locate me</string>
+    <plurals name="show_results">
+        <item quantity="one">Show %1$d result</item>
+        <item quantity="other">Show %1$d results</item>
+    </plurals>
     <string name="earthquake_row_description">Magnitude %1$s, %2$s, %3$s. View details.</string>
     <string name="last_updated">Updated %1$s</string>
     <string name="stale_updated">Saved data — updated %1$s</string>

@@ -40,7 +40,7 @@ constructor(
     private val mutableUiState =
         MutableStateFlow(
             HomeUiState(
-                mode = savedStateHandle.get<String>(MODE_KEY)?.let(HomeMode::valueOf) ?: HomeMode.LIST,
+                mode = savedStateHandle.get<String>(MODE_KEY)?.let(HomeMode::valueOf) ?: HomeMode.MAP,
                 filters =
                 HomeFilters(
                     timeRange = savedEnum(TIME_RANGE_KEY, TimeRange.PAST_DAY),

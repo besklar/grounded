@@ -95,6 +95,9 @@ fun GroundedApp() {
                 },
                 onFiltersChanged = viewModel::updateFilters,
                 onResetFilters = viewModel::resetFilters,
+                onSearchQueryChanged = viewModel::updateSearchQuery,
+                onSearch = viewModel::submitSearch,
+                onClearSearch = viewModel::clearSearch,
             )
         }
         composable(

@@ -1,10 +1,16 @@
 package com.besklar.grounded.ui.home
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performTextInput
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
@@ -219,6 +225,60 @@ class HomeScreenTest {
         }
 
         composeRule.onNodeWithText("No earthquakes match the selected filters", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun placeSearchAcceptsInputAndSubmitsFromKeyboard() {
+        var query by mutableStateOf("")
+        var submitted = false
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state = HomeUiState(snapshot = snapshot(), initialAttemptFinished = true, searchQuery = query),
+                    onModeSelected = {},
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onMapEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = {},
+                    onSearchQueryChanged = { query = it },
+                    onSearch = { submitted = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("City or postal code").performTextInput("Denver")
+        composeRule.onNodeWithText("City or postal code").performImeAction()
+
+        composeRule.runOnIdle {
+            assertEquals("Denver", query)
+            assertEquals(true, submitted)
+        }
+    }
+
+    @Test
+    fun mapOverlayOffersLayersAndExplainsLocationBeforeRequesting() {
+        var requested = false
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state = HomeUiState(snapshot = snapshot(), mode = HomeMode.MAP, initialAttemptFinished = true),
+                    onModeSelected = {},
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onMapEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = { requested = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Map layers").performClick()
+        composeRule.onNodeWithText("Terrain map").assertIsDisplayed()
+        composeRule.onNodeWithText("Satellite map").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Locate me").performClick()
+        composeRule.onNodeWithText("Your location is not uploaded or stored", substring = true).assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(false, requested) }
     }
 
     private fun snapshot(earthquakes: List<Earthquake>? = null): EarthquakeSnapshot {

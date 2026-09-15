@@ -43,6 +43,7 @@ import com.google.maps.android.clustering.Cluster
 import com.google.maps.android.clustering.ClusterItem
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
@@ -60,6 +61,10 @@ fun EarthquakeMap(
     onOpenDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
     mapsConfigured: Boolean = BuildConfig.MAPS_CONFIGURED,
+    mapType: MapType = MapType.NORMAL,
+    cameraFocus: Coordinates? = null,
+    cameraFocusKey: Any? = null,
+    showRecenterButton: Boolean = true,
 ) {
     if (!mapsConfigured) {
         MapConfigurationMissing(modifier)
@@ -94,11 +99,18 @@ fun EarthquakeMap(
         }
     }
 
+    LaunchedEffect(mapLoaded, cameraFocusKey) {
+        if (mapLoaded && cameraFocus != null && cameraFocusKey != null) {
+            cameraState.move(CameraUpdateFactory.newLatLngZoom(LatLng(cameraFocus.latitude, cameraFocus.longitude), 7f))
+            initialCameraSet = true
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraState,
-            properties = MapProperties(isMyLocationEnabled = false),
+            properties = MapProperties(isMyLocationEnabled = false, mapType = mapType),
             uiSettings = MapUiSettings(compassEnabled = true, myLocationButtonEnabled = false),
             onMapLoaded = { mapLoaded = true },
         ) {
@@ -133,7 +145,7 @@ fun EarthquakeMap(
                 )
             }
         }
-        userCoordinates?.let { user ->
+        userCoordinates?.takeIf { showRecenterButton }?.let { user ->
             FloatingActionButton(
                 onClick = {
                     cameraState.move(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), 6f))
