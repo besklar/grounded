@@ -4,18 +4,14 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 internal interface EarthquakeDao {
     @Query("SELECT * FROM earthquakes ORDER BY occurredAtMillis DESC")
-    fun observeEarthquakes(): Flow<List<EarthquakeEntity>>
+    suspend fun getEarthquakes(): List<EarthquakeEntity>
 
     @Query("SELECT * FROM snapshot_metadata WHERE id = 1")
-    fun observeMetadata(): Flow<SnapshotMetadataEntity?>
-
-    @Query("SELECT * FROM earthquakes")
-    suspend fun getEarthquakes(): List<EarthquakeEntity>
+    suspend fun getMetadata(): SnapshotMetadataEntity?
 
     @Query("DELETE FROM earthquakes")
     suspend fun deleteEarthquakes()

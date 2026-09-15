@@ -6,7 +6,8 @@ import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import java.time.Instant
 import javax.inject.Inject
 
@@ -16,9 +17,13 @@ constructor(
     private val database: GroundedDatabase,
     private val dao: EarthquakeDao,
 ) : EarthquakeStore {
-    override fun observeSnapshot(): Flow<EarthquakeSnapshot?> = combine(dao.observeEarthquakes(), dao.observeMetadata()) { events, metadata ->
-        metadata?.toModel(events)
-    }
+    override fun observeSnapshot(): Flow<EarthquakeSnapshot?> = database.invalidationTracker
+        .createFlow(EARTHQUAKES_TABLE, METADATA_TABLE)
+        .map {
+            database.withTransaction {
+                dao.getMetadata()?.toModel(dao.getEarthquakes())
+            }
+        }.distinctUntilChanged()
 
     override suspend fun currentEarthquakes(): List<Earthquake> = dao.getEarthquakes().map(EarthquakeEntity::toModel)
 
@@ -28,6 +33,11 @@ constructor(
             dao.insertEarthquakes(snapshot.earthquakes.map(Earthquake::toEntity))
             dao.upsertMetadata(snapshot.toMetadataEntity())
         }
+    }
+
+    private companion object {
+        const val EARTHQUAKES_TABLE = "earthquakes"
+        const val METADATA_TABLE = "snapshot_metadata"
     }
 }
 
