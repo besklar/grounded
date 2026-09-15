@@ -12,7 +12,8 @@ Large text, dark theme, and landscape are supported through an adaptive two-pane
 
 ## Features
 
-- Recent worldwide earthquake activity from the official USGS past-day GeoJSON feed
+- Recent worldwide earthquake activity from the official USGS seven-day GeoJSON feed
+- Shared time, magnitude, and ordering controls for the summary, map, and list
 - Scan-friendly list and interactive Google map backed by one shared dataset
 - Full event details, official USGS links, and Android sharing
 - Offline-first Room cache with explicit freshness and failed-refresh states
@@ -69,7 +70,7 @@ A more detailed explanation is available in [docs/architecture.md](docs/architec
 
 ## Product decisions
 
-- The default dataset is the USGS past 24 hours, ordered newest first.
+- Grounded caches the USGS seven-day feed once, then filters it locally. The documented default is past 24 hours, all magnitudes, newest first.
 - A nearby significant event is magnitude 4.5+ within 805 km / 500 miles.
 - Unknown values remain unknown; Grounded never turns missing magnitude into `0.0`.
 - Invalid coordinates exclude an event from Map but never from List.
@@ -96,7 +97,7 @@ Denial leaves all non-relative features working. A permanently denied permission
 ./gradlew pixel2Api31DebugAndroidTest
 ```
 
-The current suite contains 31 JVM tests and 11 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, summaries, formatting, safe links and sharing, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
+The current suite contains 37 JVM tests and 13 Android instrumentation tests. JVM coverage includes USGS normalization, an actual Retrofit/MockWebServer boundary, malformed and duplicate input, cache behavior, refresh concurrency, freshness, combined filter/sort rules, summaries, formatting, safe links and sharing, map transformation, and distance/direction calculations. Instrumentation coverage includes Compose state journeys, filter behavior, and transactional replacement against an in-memory Room database. CI runs the same static, unit, build, and API 31 managed-device checks.
 
 Manual release checks should cover:
 
@@ -111,7 +112,7 @@ Manual release checks should cover:
 ## Known limitations and next steps
 
 - Google Maps requires the developer’s own configured API key and network connectivity for tiles.
-- Filters, home-screen widgets, watched-area notifications, background polling, and offline map tiles are not implemented.
+- Home-screen widgets, watched-area notifications, background polling, and offline map tiles are not implemented.
 - A production alerting feature would require explicit semantics and likely reliable backend push; this app makes no real-time-warning claim.
 - Marker clustering can be added if real representative datasets show a measurable usability or performance need.
 

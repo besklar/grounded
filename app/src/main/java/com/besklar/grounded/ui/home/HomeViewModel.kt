@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.RefreshResult
+import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.location.LocationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CompletableDeferred
@@ -35,6 +36,12 @@ constructor(
         MutableStateFlow(
             HomeUiState(
                 mode = savedStateHandle.get<String>(MODE_KEY)?.let(HomeMode::valueOf) ?: HomeMode.LIST,
+                filters =
+                HomeFilters(
+                    timeRange = savedEnum(TIME_RANGE_KEY, TimeRange.PAST_DAY),
+                    magnitude = savedEnum(MAGNITUDE_KEY, MagnitudeFilter.ALL),
+                    order = savedEnum(ORDER_KEY, EarthquakeOrder.RECENT),
+                ),
             ),
         )
     val uiState: StateFlow<HomeUiState> = mutableUiState.asStateFlow()
@@ -49,10 +56,12 @@ constructor(
     init {
         viewModelScope.launch {
             repository.observeSnapshot().collectLatest { snapshot ->
+                val current = mutableUiState.value
                 mutableUiState.value =
-                    mutableUiState.value.copy(
+                    current.copy(
                         snapshot = snapshot,
                         dataAge = snapshot?.let { Duration.between(it.lastSuccessfulRetrieval, clock.instant()).coerceAtLeast(Duration.ZERO) },
+                        selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(snapshot, current.filters, current.locationContext) },
                     )
                 initialSnapshotObserved.complete(Unit)
             }
@@ -83,6 +92,22 @@ constructor(
 
     fun selectEvent(id: String?) {
         mutableUiState.value = mutableUiState.value.copy(selectedEventId = id)
+    }
+
+    fun updateFilters(filters: HomeFilters) {
+        savedStateHandle[TIME_RANGE_KEY] = filters.timeRange.name
+        savedStateHandle[MAGNITUDE_KEY] = filters.magnitude.name
+        savedStateHandle[ORDER_KEY] = filters.order.name
+        val current = mutableUiState.value
+        mutableUiState.value =
+            current.copy(
+                filters = filters,
+                selectedEventId = current.selectedEventId?.takeIf { it in visibleIds(current.snapshot, filters, current.locationContext) },
+            )
+    }
+
+    fun resetFilters() {
+        updateFilters(HomeFilters.DEFAULT)
     }
 
     fun loadLocation() {
@@ -140,8 +165,25 @@ constructor(
 
     private companion object {
         const val MODE_KEY = "home_mode"
+        const val TIME_RANGE_KEY = "time_range"
+        const val MAGNITUDE_KEY = "magnitude_filter"
+        const val ORDER_KEY = "earthquake_order"
         const val NEW_EVENT_DURATION_MILLIS = 30_000L
         const val REFRESH_CONFIRMATION_MILLIS = 3_000L
         const val FRESHNESS_TICK_MILLIS = 60_000L
     }
+
+    private inline fun <reified T : Enum<T>> savedEnum(key: String, default: T): T = savedStateHandle.get<String>(key)?.let { value -> runCatching { enumValueOf<T>(value) }.getOrNull() } ?: default
+
+    private fun visibleIds(
+        snapshot: com.besklar.grounded.model.EarthquakeSnapshot?,
+        filters: HomeFilters,
+        locationContext: LocationContext,
+    ): Set<String> = EarthquakeFilter
+        .apply(
+            earthquakes = snapshot?.earthquakes.orEmpty(),
+            filters = filters,
+            now = clock.instant(),
+            userCoordinates = (locationContext as? LocationContext.Available)?.coordinates,
+        ).mapTo(mutableSetOf()) { it.id }
 }

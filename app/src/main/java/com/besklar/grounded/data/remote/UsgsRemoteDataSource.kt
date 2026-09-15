@@ -26,7 +26,7 @@ constructor(
     private val mapper: UsgsFeedMapper,
 ) : EarthquakeRemoteSource {
     override suspend fun fetch(): RemoteFeedResult = try {
-        val response = api.getPastDay()
+        val response = api.getPastWeek()
         val body = response.body()
         when {
             !response.isSuccessful -> RemoteFeedResult.HttpFailure(response.code())

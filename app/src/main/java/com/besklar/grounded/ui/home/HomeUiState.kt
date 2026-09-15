@@ -28,6 +28,7 @@ data class HomeUiState(
     val newEventIds: Set<String> = emptySet(),
     val locationContext: LocationContext = LocationContext.NotRequested,
     val dataAge: Duration? = null,
+    val filters: HomeFilters = HomeFilters.DEFAULT,
 ) {
     val isInitialLoading: Boolean
         get() = snapshot == null && !initialAttemptFinished

@@ -93,6 +93,8 @@ fun GroundedApp() {
                         permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                     }
                 },
+                onFiltersChanged = viewModel::updateFilters,
+                onResetFilters = viewModel::resetFilters,
             )
         }
         composable(

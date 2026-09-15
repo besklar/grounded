@@ -33,7 +33,7 @@ constructor(
                 store.replace(
                     EarthquakeSnapshot(
                         earthquakes = current,
-                        queryWindow = "past_24_hours",
+                        queryWindow = "past_7_days",
                         lastSuccessfulRetrieval = clock.instant(),
                         responseGeneratedAt = remoteResult.feed.generatedAt,
                         sourceUrl = remoteResult.feed.sourceUrl,

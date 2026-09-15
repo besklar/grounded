@@ -9,9 +9,9 @@
     <string name="checking_recent_activity_explanation">Fetching the latest reported earthquakes from USGS.</string>
     <string name="showing_saved_activity">Showing saved earthquake activity</string>
     <string name="no_recent_activity">No recent earthquake activity</string>
-    <plurals name="events_past_day">
-        <item quantity="one">%1$d event worldwide in the past 24 hours</item>
-        <item quantity="other">%1$d events worldwide in the past 24 hours</item>
+    <plurals name="events_in_range">
+        <item quantity="one">%1$d event worldwide in %2$s</item>
+        <item quantity="other">%1$d events worldwide in %2$s</item>
     </plurals>
     <plurals name="saved_events_count">
         <item quantity="one">%1$d saved event remains available</item>
@@ -49,8 +49,8 @@
     <string name="significant_nearby">M%1$s earthquake near you</string>
     <string name="no_significant_nearby">No significant earthquakes near you</string>
     <plurals name="nearby_events">
-        <item quantity="one">%1$d event within 500 miles in the past 24 hours</item>
-        <item quantity="other">%1$d events within 500 miles in the past 24 hours</item>
+        <item quantity="one">%1$d event within 500 miles in %2$s</item>
+        <item quantity="other">%1$d events within 500 miles in %2$s</item>
     </plurals>
     <string name="add_location_context">See earthquakes relative to you</string>
     <string name="location_explanation_title">See earthquakes relative to you</string>
@@ -81,4 +81,27 @@
         <item quantity="one">%1$d new earthquake</item>
         <item quantity="other">%1$d new earthquakes</item>
     </plurals>
+    <string name="filters">Filters</string>
+    <plurals name="filters_changed">
+        <item quantity="one">Filters · %1$d changed</item>
+        <item quantity="other">Filters · %1$d changed</item>
+    </plurals>
+    <string name="filter_earthquakes">Filter earthquakes</string>
+    <string name="filter_summary">%1$s · %2$s · %3$s</string>
+    <string name="time_range">Time range</string>
+    <string name="magnitude">Magnitude</string>
+    <string name="ordering">Ordering</string>
+    <string name="past_hour">past hour</string>
+    <string name="past_24_hours">past 24 hours</string>
+    <string name="past_7_days">past 7 days</string>
+    <string name="all_magnitudes">all magnitudes</string>
+    <string name="magnitude_2_5_plus">M2.5+</string>
+    <string name="magnitude_4_5_plus">M4.5+</string>
+    <string name="most_recent">most recent</string>
+    <string name="nearest">nearest</string>
+    <string name="strongest">strongest</string>
+    <string name="nearest_requires_location">Add approximate location to order by distance.</string>
+    <string name="nearest_unavailable_summary">most recent · nearest needs location</string>
+    <string name="reset_filters">Reset filters</string>
+    <string name="filters_excluded_all">No earthquakes match the selected filters. Reset or adjust them to see more events.</string>
 </resources>

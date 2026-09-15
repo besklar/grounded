@@ -31,6 +31,8 @@ The ViewModel owns data that affects the screen as a product: cached content, re
 
 Refreshes are serialized to one job. Cached content remains visible during refresh, failures do not destroy it, and the ViewModel waits for Room’s first snapshot emission before deciding whether refreshed IDs are genuinely new. That last detail prevents startup scheduling from changing product behavior.
 
+The repository caches one seven-day feed rather than separate results per filter. A pure selector applies the chosen time range, magnitude threshold, and ordering in memory; that exact list is passed to the summary, map, list, and empty-state decision. This is analogous to a memoized Redux selector: the durable store remains unchanged while the UI derives a focused view. Nearest ordering uses local distance calculation and falls back explicitly to recent ordering when location is unavailable.
+
 ## Decisions intentionally deferred
 
 - No multi-module build: one application does not yet justify dependency graphs and slower project navigation.

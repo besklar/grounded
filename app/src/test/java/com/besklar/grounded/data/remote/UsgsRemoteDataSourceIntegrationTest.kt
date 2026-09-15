@@ -29,7 +29,7 @@ class UsgsRemoteDataSourceIntegrationTest {
 
         assertEquals("event-1", result.feed.earthquakes.single().id)
         assertEquals(3.4, result.feed.earthquakes.single().magnitude!!, 0.0)
-        assertEquals("/earthquakes/feed/v1.0/summary/all_day.geojson", server.takeRequest().path)
+        assertEquals("/earthquakes/feed/v1.0/summary/all_week.geojson", server.takeRequest().path)
     }
 
     @Test

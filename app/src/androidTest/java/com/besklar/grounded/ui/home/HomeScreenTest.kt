@@ -1,6 +1,7 @@
 package com.besklar.grounded.ui.home
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -166,6 +167,58 @@ class HomeScreenTest {
 
         composeRule.onNodeWithText("Map setup needed").assertIsDisplayed()
         composeRule.onNodeWithText("The earthquake list remains available", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun filterSheetChangesTimeRangeAndExplainsUnavailableNearestOrdering() {
+        var filters = HomeFilters.DEFAULT
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state = HomeUiState(snapshot = snapshot(), initialAttemptFinished = true, filters = filters),
+                    onModeSelected = {},
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onMapEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = {},
+                    onFiltersChanged = { filters = it },
+                    onResetFilters = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Filters").performClick()
+        composeRule.onNodeWithText("past hour").performClick()
+        composeRule.runOnIdle { assertEquals(TimeRange.PAST_HOUR, filters.timeRange) }
+        composeRule.onNodeWithText("nearest").assertIsNotEnabled()
+        composeRule.onNodeWithText("Add approximate location to order by distance.").assertExists()
+    }
+
+    @Test
+    fun filteredEmptyStateExplainsThatFiltersExcludedEvents() {
+        val oldEvent =
+            snapshot().earthquakes.single().copy(occurredAt = Instant.now().minusSeconds(2 * 60 * 60))
+        composeRule.setContent {
+            GroundedTheme {
+                HomeScreen(
+                    state =
+                    HomeUiState(
+                        snapshot = snapshot(listOf(oldEvent)),
+                        initialAttemptFinished = true,
+                        filters = HomeFilters(timeRange = TimeRange.PAST_HOUR),
+                    ),
+                    onModeSelected = {},
+                    onRefresh = {},
+                    onEventSelected = {},
+                    onMapEventSelected = {},
+                    onOpenDetails = {},
+                    onRequestLocation = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("No earthquakes match the selected filters", substring = true).assertIsDisplayed()
     }
 
     private fun snapshot(earthquakes: List<Earthquake>? = null): EarthquakeSnapshot {

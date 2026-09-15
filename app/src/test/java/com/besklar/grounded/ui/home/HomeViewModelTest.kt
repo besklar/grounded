@@ -7,6 +7,7 @@ import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.RefreshResult
 import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.location.LocationRepository
+import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -107,6 +108,44 @@ class HomeViewModelTest {
         viewModel.viewModelScope.cancel()
     }
 
+    @Test
+    fun `filtering out the selected event clears selection`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val event = earthquake("selected", magnitude = 2.0)
+        val repository = FakeRepository(result = RefreshResult.Success(emptySet(), 0, 0), initialSnapshot = snapshot(events = listOf(event)))
+        val viewModel = viewModel(repository)
+        runCurrent()
+
+        viewModel.selectEvent(event.id)
+        viewModel.updateFilters(HomeFilters(magnitude = MagnitudeFilter.FOUR_POINT_FIVE))
+
+        assertEquals(null, viewModel.uiState.value.selectedEventId)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `filters restore from saved state and reset to defaults`() = runTest(mainDispatcherRule.dispatcher.scheduler) {
+        val savedState =
+            SavedStateHandle(
+                mapOf(
+                    "time_range" to TimeRange.PAST_WEEK.name,
+                    "magnitude_filter" to MagnitudeFilter.TWO_POINT_FIVE.name,
+                    "earthquake_order" to EarthquakeOrder.STRONGEST.name,
+                ),
+            )
+        val repository = FakeRepository(result = RefreshResult.Success(emptySet(), 0, 0))
+        val viewModel =
+            HomeViewModel(repository, FakeLocationRepository(), savedState, Clock.fixed(now, ZoneOffset.UTC))
+        runCurrent()
+
+        assertEquals(
+            HomeFilters(TimeRange.PAST_WEEK, MagnitudeFilter.TWO_POINT_FIVE, EarthquakeOrder.STRONGEST),
+            viewModel.uiState.value.filters,
+        )
+        viewModel.resetFilters()
+        assertEquals(HomeFilters.DEFAULT, viewModel.uiState.value.filters)
+        viewModel.viewModelScope.cancel()
+    }
+
     private fun viewModel(repository: EarthquakeRepository) = HomeViewModel(
         repository = repository,
         locationRepository = FakeLocationRepository(),
@@ -114,7 +153,9 @@ class HomeViewModelTest {
         clock = Clock.fixed(now, ZoneOffset.UTC),
     )
 
-    private fun snapshot(retrievedAt: Instant = now) = EarthquakeSnapshot(emptyList(), "past_24_hours", retrievedAt, retrievedAt, null, "USGS")
+    private fun snapshot(retrievedAt: Instant = now, events: List<Earthquake> = emptyList()) = EarthquakeSnapshot(events, "past_7_days", retrievedAt, retrievedAt, null, "USGS")
+
+    private fun earthquake(id: String, magnitude: Double) = Earthquake(id, magnitude, null, id, now, now, null, null, null, null, null, null, null, null)
 
     private class FakeRepository(
         private val result: RefreshResult? = null,
