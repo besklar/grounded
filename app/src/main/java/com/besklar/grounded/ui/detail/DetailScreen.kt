@@ -33,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,6 +75,9 @@ fun DetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     mapsConfigured: Boolean = BuildConfig.MAPS_CONFIGURED,
+    refreshing: Boolean = false,
+    refreshFailed: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier,
@@ -99,7 +104,18 @@ fun DetailScreen(
         } else if (earthquake == null) {
             MissingEvent(onBack = onBack, modifier = Modifier.padding(padding))
         } else {
-            DetailContent(earthquake, relativeLocation, mapsConfigured, Modifier.padding(padding))
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize().padding(padding).testTag("detail-pull-refresh"),
+            ) {
+                DetailContent(
+                    earthquake = earthquake,
+                    relativeLocation = relativeLocation,
+                    mapsConfigured = mapsConfigured,
+                    refreshFailed = refreshFailed,
+                )
+            }
         }
     }
 }
@@ -109,6 +125,7 @@ private fun DetailContent(
     earthquake: Earthquake,
     relativeLocation: RelativeLocation?,
     mapsConfigured: Boolean,
+    refreshFailed: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -131,6 +148,20 @@ private fun DetailContent(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
+        if (refreshFailed) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(R.string.detail_refresh_failed),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
+        }
         EarthquakeHero(earthquake, EarthquakeFormatter.relativeTime(earthquake.occurredAt, now, locale, zoneId), locale)
 
         earthquake.coordinates?.let { coordinates ->

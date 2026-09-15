@@ -110,6 +110,9 @@ fun GroundedApp() {
                 relativeLocation = detailState.relativeLocation,
                 isLoading = !detailState.isResolved,
                 onBack = navController::navigateUp,
+                refreshing = detailState.isRefreshing,
+                refreshFailed = detailState.refreshFailed,
+                onRefresh = viewModel::refresh,
             )
         }
     }

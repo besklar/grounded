@@ -4,9 +4,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.unit.Density
 import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
@@ -75,6 +78,47 @@ class DetailScreenTest {
         composeRule.onNodeWithText("Event location").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Map preview unavailable", substring = true).assertIsDisplayed()
         composeRule.onNodeWithText("39.7", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun pullGestureRefreshesDetailsWithoutHidingTheCurrentEvent() {
+        var refreshRequested = false
+        composeRule.setContent {
+            GroundedTheme {
+                DetailScreen(
+                    earthquake = earthquake(),
+                    relativeLocation = null,
+                    isLoading = false,
+                    onBack = {},
+                    onRefresh = { refreshRequested = true },
+                    mapsConfigured = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("detail-pull-refresh").performTouchInput { swipeDown() }
+
+        composeRule.runOnIdle { assertTrue(refreshRequested) }
+        composeRule.onNodeWithText("M 4.2").assertIsDisplayed()
+    }
+
+    @Test
+    fun failedRefreshKeepsDetailsAndShowsSavedDataMessage() {
+        composeRule.setContent {
+            GroundedTheme {
+                DetailScreen(
+                    earthquake = earthquake(),
+                    relativeLocation = null,
+                    isLoading = false,
+                    onBack = {},
+                    refreshFailed = true,
+                    mapsConfigured = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Couldn’t update this earthquake", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("M 4.2").assertIsDisplayed()
     }
 
     private fun earthquake(): Earthquake {

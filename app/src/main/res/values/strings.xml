@@ -29,6 +29,7 @@
     <string name="event_epicenter">Reported epicenter</string>
     <string name="event_map_description">Map showing the reported epicenter of the magnitude %1$s earthquake</string>
     <string name="map_preview_unavailable">Map preview unavailable. Coordinates remain available below.</string>
+    <string name="detail_refresh_failed">Couldn’t update this earthquake. Showing the saved details.</string>
     <string name="loading_earthquake_details">Loading earthquake details</string>
     <string name="event_unavailable">Earthquake no longer available</string>
     <string name="event_unavailable_explanation">This event is not present in the latest saved dataset. It may have been revised or moved outside the current time window.</string>
