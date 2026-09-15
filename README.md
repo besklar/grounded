@@ -68,6 +68,8 @@ The code intentionally remains one Gradle module. Package boundaries provide sep
 
 A more detailed explanation is available in [docs/architecture.md](docs/architecture.md).
 
+The accepted design for the next map-first search and expandable-results experience is documented in [docs/map-first-design.md](docs/map-first-design.md).
+
 ## Product decisions
 
 - Grounded caches the USGS seven-day feed once, then filters it locally. The documented default is past 24 hours, all magnitudes, newest first.
