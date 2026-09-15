@@ -1,5 +1,6 @@
 package com.besklar.grounded.ui.home
 
+import com.besklar.grounded.location.LocationContext
 import com.besklar.grounded.model.EarthquakeSnapshot
 
 enum class HomeMode {
@@ -24,6 +25,7 @@ data class HomeUiState(
     val initialAttemptFinished: Boolean = false,
     val selectedEventId: String? = null,
     val newEventIds: Set<String> = emptySet(),
+    val locationContext: LocationContext = LocationContext.NotRequested,
 ) {
     val isInitialLoading: Boolean
         get() = snapshot == null && !initialAttemptFinished

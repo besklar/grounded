@@ -1,5 +1,6 @@
 package com.besklar.grounded.ui.home
 
+import com.besklar.grounded.location.RelativeLocation
 import com.besklar.grounded.model.Earthquake
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -22,6 +23,14 @@ object EarthquakeFormatter {
     fun depth(earthquake: Earthquake, locale: Locale): String? = earthquake.depthKilometers?.let {
         val number = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 1 }
         "${number.format(it)} km deep"
+    }
+
+    fun relativeLocation(relative: RelativeLocation, locale: Locale): String {
+        val useMiles = locale.country.uppercase(Locale.ROOT) in setOf("US", "LR", "MM")
+        val value = if (useMiles) relative.distanceKilometers * 0.621371 else relative.distanceKilometers
+        val unit = if (useMiles) "mi" else "km"
+        val number = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
+        return "${number.format(value)} $unit ${relative.direction.label}"
     }
 
     fun relativeTime(

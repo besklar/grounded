@@ -11,6 +11,10 @@ import com.besklar.grounded.data.remote.UsgsRemoteDataSource
 import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.EarthquakeStore
 import com.besklar.grounded.data.repository.OfflineFirstEarthquakeRepository
+import com.besklar.grounded.location.DefaultLocationRepository
+import com.besklar.grounded.location.LocationRepository
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -39,6 +43,10 @@ internal abstract class AppBindings {
     @Binds
     @Singleton
     abstract fun bindRepository(repository: OfflineFirstEarthquakeRepository): EarthquakeRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLocationRepository(repository: DefaultLocationRepository): LocationRepository
 }
 
 @Module
@@ -53,6 +61,10 @@ internal object AppModule {
 
     @Provides
     fun provideClock(): Clock = Clock.systemUTC()
+
+    @Provides
+    @Singleton
+    fun provideLocationClient(@ApplicationContext context: Context): FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
 
     @Provides
     @Singleton

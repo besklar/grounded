@@ -1,6 +1,18 @@
 package com.besklar.grounded.ui
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
@@ -20,6 +32,29 @@ fun GroundedApp() {
         composable("home") {
             val viewModel: HomeViewModel = hiltViewModel()
             val state = viewModel.uiState.collectAsStateWithLifecycle().value
+            val context = LocalContext.current
+            val permissionLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    if (granted) {
+                        viewModel.loadLocation()
+                    } else {
+                        val activity = context as? Activity
+                        val permanently =
+                            activity?.let {
+                                !ActivityCompat.shouldShowRequestPermissionRationale(
+                                    it,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                )
+                            } ?: false
+                        viewModel.recordLocationDenial(permanently)
+                    }
+                }
+            val alreadyGranted =
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED
+            LaunchedEffect(alreadyGranted) {
+                if (alreadyGranted) viewModel.loadLocation()
+            }
             val openDetails: (String) -> Unit = { id ->
                 viewModel.selectEvent(id)
                 navController.navigate("detail/$id")
@@ -31,6 +66,18 @@ fun GroundedApp() {
                 onEventSelected = openDetails,
                 onMapEventSelected = viewModel::selectEvent,
                 onOpenDetails = openDetails,
+                onRequestLocation = {
+                    if ((state.locationContext as? com.besklar.grounded.location.LocationContext.Denied)?.permanently == true) {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null),
+                            ),
+                        )
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    }
+                },
             )
         }
         composable(
@@ -38,8 +85,12 @@ fun GroundedApp() {
             arguments = listOf(navArgument("eventId") { type = NavType.StringType }),
         ) {
             val viewModel: DetailViewModel = hiltViewModel()
-            val earthquake = viewModel.earthquake.collectAsStateWithLifecycle().value
-            DetailScreen(earthquake = earthquake, onBack = navController::navigateUp)
+            val detailState = viewModel.uiState.collectAsStateWithLifecycle().value
+            DetailScreen(
+                earthquake = detailState.earthquake,
+                relativeLocation = detailState.relativeLocation,
+                onBack = navController::navigateUp,
+            )
         }
     }
 }

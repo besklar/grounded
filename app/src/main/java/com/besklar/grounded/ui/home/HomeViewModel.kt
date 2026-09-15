@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.besklar.grounded.data.repository.EarthquakeRepository
 import com.besklar.grounded.data.repository.RefreshResult
+import com.besklar.grounded.location.LocationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ class HomeViewModel
 @Inject
 constructor(
     private val repository: EarthquakeRepository,
+    private val locationRepository: LocationRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val mutableUiState =
@@ -37,6 +39,11 @@ constructor(
                 mutableUiState.value = mutableUiState.value.copy(snapshot = snapshot)
             }
         }
+        viewModelScope.launch {
+            locationRepository.context.collectLatest { context ->
+                mutableUiState.value = mutableUiState.value.copy(locationContext = context)
+            }
+        }
         refresh()
     }
 
@@ -47,6 +54,14 @@ constructor(
 
     fun selectEvent(id: String?) {
         mutableUiState.value = mutableUiState.value.copy(selectedEventId = id)
+    }
+
+    fun loadLocation() {
+        viewModelScope.launch { locationRepository.loadApproximateLocation() }
+    }
+
+    fun recordLocationDenial(permanently: Boolean) {
+        locationRepository.recordDenial(permanently)
     }
 
     fun refresh() {

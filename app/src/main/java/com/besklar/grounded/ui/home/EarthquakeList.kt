@@ -30,6 +30,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.besklar.grounded.R
+import com.besklar.grounded.location.RelativeLocationCalculator
+import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import java.time.Instant
 import java.time.ZoneId
@@ -43,6 +45,7 @@ fun EarthquakeList(
     newEventIds: Set<String>,
     onRefresh: () -> Unit,
     onEventSelected: (String) -> Unit,
+    userCoordinates: Coordinates?,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -68,6 +71,7 @@ fun EarthquakeList(
                     earthquake = earthquake,
                     isNew = earthquake.id in newEventIds,
                     onClick = { onEventSelected(earthquake.id) },
+                    userCoordinates = userCoordinates,
                 )
                 HorizontalDivider()
             }
@@ -80,6 +84,7 @@ private fun EarthquakeRow(
     earthquake: Earthquake,
     isNew: Boolean,
     onClick: () -> Unit,
+    userCoordinates: Coordinates?,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val now = remember { Instant.now() }
@@ -87,6 +92,12 @@ private fun EarthquakeRow(
     val place = EarthquakeFormatter.place(earthquake, locale)
     val relativeTime = EarthquakeFormatter.relativeTime(earthquake.occurredAt, now, locale, ZoneId.systemDefault())
     val depth = EarthquakeFormatter.depth(earthquake, locale)
+    val relative =
+        userCoordinates?.let { user ->
+            earthquake.coordinates?.let { event ->
+                EarthquakeFormatter.relativeLocation(RelativeLocationCalculator.calculate(user, event), locale)
+            }
+        }
     val accessibilityLabel = stringResource(R.string.earthquake_row_description, magnitude, place, relativeTime)
 
     Row(
@@ -103,7 +114,7 @@ private fun EarthquakeRow(
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = place, style = MaterialTheme.typography.titleMedium)
             Text(
-                text = listOfNotNull(relativeTime, depth).joinToString(" · "),
+                text = listOfNotNull(relativeTime, depth, relative).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

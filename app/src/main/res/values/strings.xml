@@ -37,6 +37,19 @@
     <string name="share_earthquake">Share earthquake</string>
     <string name="usgs_source">USGS</string>
     <string name="usgs_attribution">Source: U.S. Geological Survey. Event details may be revised.</string>
+    <string name="significant_nearby">M%1$s earthquake near you</string>
+    <string name="no_significant_nearby">No significant earthquakes near you</string>
+    <plurals name="nearby_events">
+        <item quantity="one">%1$d event within 500 miles in the past 24 hours</item>
+        <item quantity="other">%1$d events within 500 miles in the past 24 hours</item>
+    </plurals>
+    <string name="add_location_context">See earthquakes relative to you</string>
+    <string name="location_explanation_title">See earthquakes relative to you</string>
+    <string name="location_explanation_body">Approximate location lets Grounded show how far away earthquakes occurred and center the map around you. Your location is not uploaded or stored.</string>
+    <string name="use_my_location">Use my location</string>
+    <string name="not_now">Not now</string>
+    <string name="distance_from_you">From you</string>
+    <string name="recenter_map">Center map on my approximate location</string>
     <string name="offline_saved_results">Offline — showing saved results</string>
     <string name="new_event">New</string>
     <string name="tsunami_flag">Tsunami flag</string>

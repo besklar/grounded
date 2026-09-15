@@ -1,5 +1,7 @@
 package com.besklar.grounded.ui.home
 
+import com.besklar.grounded.location.LocationContext
+import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.model.EarthquakeSnapshot
 import org.junit.Assert.assertEquals
@@ -25,6 +27,33 @@ class SituationSummaryCalculatorTest {
     fun `empty result is intentional no activity state`() {
         val empty = EarthquakeSnapshot(emptyList(), "past_24_hours", now, now, null, "USGS")
         assertSame(SituationSummary.NoActivity, calculator.calculate(empty, refreshFailed = false))
+    }
+
+    @Test
+    fun `significant nearby event wins with location`() {
+        val event =
+            Earthquake(
+                "nearby",
+                4.8,
+                "mw",
+                "Nearby",
+                now,
+                now,
+                Coordinates(40.0, -105.0),
+                5.0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+            )
+        val snapshot = EarthquakeSnapshot(listOf(event), "past_24_hours", now, now, null, "USGS")
+        val location = LocationContext.Available(Coordinates(39.7, -105.0), now)
+
+        val result = calculator.calculate(snapshot, refreshFailed = false, locationContext = location)
+
+        assertEquals("nearby", (result as SituationSummary.NearbySignificant).earthquake.id)
     }
 
     private fun snapshot() = EarthquakeSnapshot(

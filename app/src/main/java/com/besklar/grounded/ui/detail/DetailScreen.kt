@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.besklar.grounded.R
+import com.besklar.grounded.location.RelativeLocation
 import com.besklar.grounded.model.Earthquake
 import com.besklar.grounded.ui.home.EarthquakeFormatter
 import java.text.DateFormat
@@ -46,6 +47,7 @@ import java.util.Date
 @Composable
 fun DetailScreen(
     earthquake: Earthquake?,
+    relativeLocation: RelativeLocation?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -69,13 +71,17 @@ fun DetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) { CircularProgressIndicator() }
         } else {
-            DetailContent(earthquake, Modifier.padding(padding))
+            DetailContent(earthquake, relativeLocation, Modifier.padding(padding))
         }
     }
 }
 
 @Composable
-private fun DetailContent(earthquake: Earthquake, modifier: Modifier = Modifier) {
+private fun DetailContent(
+    earthquake: Earthquake,
+    relativeLocation: RelativeLocation?,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     val now = remember { Instant.now() }
@@ -101,6 +107,9 @@ private fun DetailContent(earthquake: Earthquake, modifier: Modifier = Modifier)
         HorizontalDivider()
         DetailRow(stringResource(R.string.occurred), occurred)
         EarthquakeFormatter.depth(earthquake, locale)?.let { DetailRow(stringResource(R.string.depth), it) }
+        relativeLocation?.let {
+            DetailRow(stringResource(R.string.distance_from_you), EarthquakeFormatter.relativeLocation(it, locale))
+        }
         earthquake.coordinates?.let {
             DetailRow(stringResource(R.string.coordinates), "${number.format(it.latitude)}, ${number.format(it.longitude)}")
         }

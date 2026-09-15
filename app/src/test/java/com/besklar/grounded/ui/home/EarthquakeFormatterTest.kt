@@ -1,5 +1,7 @@
 package com.besklar.grounded.ui.home
 
+import com.besklar.grounded.location.CompassDirection
+import com.besklar.grounded.location.RelativeLocation
 import com.besklar.grounded.model.Coordinates
 import com.besklar.grounded.model.Earthquake
 import org.junit.Assert.assertEquals
@@ -27,6 +29,13 @@ class EarthquakeFormatterTest {
         assertEquals("5 min ago", relative(now.minusSeconds(300)))
         assertEquals("2 hr ago", relative(now.minusSeconds(7_200)))
         assertTrue(relative(now.minusSeconds(90_000)).contains("2026"))
+    }
+
+    @Test
+    fun `relative distance uses locale measurement system`() {
+        val relative = RelativeLocation(100.0, CompassDirection.NORTH)
+        assertEquals("62 mi north", EarthquakeFormatter.relativeLocation(relative, Locale.US))
+        assertEquals("100 km north", EarthquakeFormatter.relativeLocation(relative, Locale.CANADA))
     }
 
     private fun relative(occurredAt: Instant) = EarthquakeFormatter.relativeTime(occurredAt, now, Locale.US, ZoneOffset.UTC)
