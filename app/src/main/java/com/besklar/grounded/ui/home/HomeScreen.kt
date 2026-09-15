@@ -265,35 +265,36 @@ private fun PortraitMapAndResults(
         sheetContent = {
             Box(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clickable(role = Role.Button) {
-                                onModeSelected(HomeMode.LIST)
-                                coroutineScope.launch { sheetState.expand() }
-                            }
-                            .semantics {
-                                contentDescription =
-                                    if (expanded) {
-                                        resultLabel
-                                    } else {
-                                        expandResultLabel
-                                    }
-                            }.padding(horizontal = 20.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            resultLabel,
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.semantics { heading() },
-                        )
+                    if (!expanded) {
+                        Row(
+                            modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .clickable(role = Role.Button) {
+                                    onModeSelected(HomeMode.LIST)
+                                    coroutineScope.launch { sheetState.expand() }
+                                }
+                                .semantics { contentDescription = expandResultLabel }
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                resultLabel,
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.semantics { heading() },
+                            )
+                        }
                     }
                     if (expanded) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            SituationSummaryCard(state, onRequestLocation)
+                            SituationSummaryCard(
+                                state = state,
+                                onRequestLocation = onRequestLocation,
+                                showTitle = false,
+                                showLocationAction = false,
+                            )
                             FilterControls(
                                 filters = state.filters,
                                 locationAvailable = state.locationContext is LocationContext.Available,
@@ -576,32 +577,36 @@ private fun SituationSummaryCard(
     state: HomeUiState,
     onRequestLocation: () -> Unit,
     modifier: Modifier = Modifier,
+    showTitle: Boolean = true,
+    showLocationAction: Boolean = true,
 ) {
     val calculator = SituationSummaryCalculator()
     val summary = calculator.calculate(state.snapshot, state.refreshStatus is RefreshStatus.Failed, state.locationContext)
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     var showLocationExplanation by remember { mutableStateOf(false) }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text =
-            if (state.isInitialLoading) {
-                stringResource(R.string.checking_recent_activity)
-            } else {
-                when (summary) {
-                    is SituationSummary.GlobalActivity -> stringResource(R.string.recent_activity)
-                    is SituationSummary.SavedActivity -> stringResource(R.string.showing_saved_activity)
-                    is SituationSummary.NearbySignificant ->
-                        stringResource(
-                            R.string.significant_nearby,
-                            EarthquakeFormatter.magnitude(summary.earthquake, locale),
-                        )
-                    is SituationSummary.NoSignificantNearby -> stringResource(R.string.no_significant_nearby)
-                    SituationSummary.NoActivity -> stringResource(R.string.no_recent_activity)
-                }
-            },
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.semantics { heading() },
-        )
+        if (showTitle) {
+            Text(
+                text =
+                if (state.isInitialLoading) {
+                    stringResource(R.string.checking_recent_activity)
+                } else {
+                    when (summary) {
+                        is SituationSummary.GlobalActivity -> stringResource(R.string.recent_activity)
+                        is SituationSummary.SavedActivity -> stringResource(R.string.showing_saved_activity)
+                        is SituationSummary.NearbySignificant ->
+                            stringResource(
+                                R.string.significant_nearby,
+                                EarthquakeFormatter.magnitude(summary.earthquake, locale),
+                            )
+                        is SituationSummary.NoSignificantNearby -> stringResource(R.string.no_significant_nearby)
+                        SituationSummary.NoActivity -> stringResource(R.string.no_recent_activity)
+                    }
+                },
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.semantics { heading() },
+            )
+        }
         Text(
             text =
             if (state.isInitialLoading) {
@@ -676,7 +681,7 @@ private fun SituationSummaryCard(
                 )
             else -> Unit
         }
-        if (state.locationContext is LocationContext.NotRequested || state.locationContext is LocationContext.Denied) {
+        if (showLocationAction && (state.locationContext is LocationContext.NotRequested || state.locationContext is LocationContext.Denied)) {
             TextButton(onClick = { showLocationExplanation = true }) {
                 Text(stringResource(R.string.add_location_context))
             }

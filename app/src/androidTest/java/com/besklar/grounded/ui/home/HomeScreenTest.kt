@@ -135,8 +135,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun locationExplanationPrecedesPermissionCallback() {
-        var requested = false
+    fun expandedResultsKeepUsefulMetadataWithoutRedundantHeader() {
         composeRule.setContent {
             GroundedTheme {
                 HomeScreen(
@@ -152,14 +151,17 @@ class HomeScreenTest {
                     onEventSelected = {},
                     onMapEventSelected = {},
                     onOpenDetails = {},
-                    onRequestLocation = { requested = true },
+                    onRequestLocation = {},
+                    mapsConfigured = false,
                 )
             }
         }
 
-        composeRule.onNodeWithText("See earthquakes relative to you").performClick()
-        composeRule.onNodeWithText("Your location is not uploaded or stored", substring = true).assertIsDisplayed()
-        composeRule.runOnIdle { assertEquals(false, requested) }
+        composeRule.onNodeWithText("1 result").assertDoesNotExist()
+        composeRule.onNodeWithText("Recent earthquake activity").assertDoesNotExist()
+        composeRule.onNodeWithText("See earthquakes relative to you").assertDoesNotExist()
+        composeRule.onNodeWithText("1 event worldwide", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Updated", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -308,6 +310,7 @@ class HomeScreenTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithContentDescription("1 result. Expand results.").performClick()
         composeRule.waitForIdle()
+        composeRule.onNodeWithText("1 result").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Collapse results and return to map").assertIsDisplayed().performClick()
         composeRule.waitForIdle()
 
@@ -345,19 +348,20 @@ class HomeScreenTest {
         val now = Instant.now()
         val near = earthquake("near", "Near event", Coordinates(0.1, 0.1), now)
         val far = earthquake("far", "Far event", Coordinates(20.0, 20.0), now)
+        var mode by mutableStateOf(HomeMode.MAP)
         composeRule.setContent {
             GroundedTheme {
                 HomeScreen(
                     state =
                     HomeUiState(
                         snapshot = snapshot(listOf(near, far)),
-                        mode = HomeMode.LIST,
+                        mode = mode,
                         initialAttemptFinished = true,
                         searchQuery = "Origin",
                         searchScope = SearchScope("Origin", Coordinates(0.0, 0.0)),
                         searchStatus = SearchStatus.Resolved,
                     ),
-                    onModeSelected = {},
+                    onModeSelected = { mode = it },
                     onRefresh = {},
                     onEventSelected = {},
                     onMapEventSelected = {},
@@ -368,7 +372,8 @@ class HomeScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("1 result").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("1 result. Expand results.").assertIsDisplayed().performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Near event").assertIsDisplayed()
         composeRule.onNodeWithText("Far event").assertDoesNotExist()
     }
